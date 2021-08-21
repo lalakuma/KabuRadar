@@ -60,3 +60,4 @@ def shuukei_toCsv():
         strpath = "../analys/" + strpfall + "_" + "W" + str(cnt_win) + "L" + str(cnt_lose) + "_" + strWinPer + "_" + strincome + ".csv"
         df.to_csv(strpath, encoding="shift_jis")    
     
+#shuukei_toCsv()
