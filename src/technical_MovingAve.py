@@ -1,39 +1,24 @@
-import mpl_finance
-import matplotlib.pyplot as plt
-from pandas_datareader import data
-import pandas as pd 
-import numpy as np
- 
-# 株価データを取得
-df = data.DataReader('7203.JP', 'stooq')
-print(df)
-# 日付の古い順に並び替え
-df.sort_index(inplace=True)
+import common_def as DEF
 
-df["SMA5"] = df["close"].rolling(window=5).mean()
-df["SMA25"] = df["close"].rolling(window=25).mean()
-
-# チャート定義
-fig, ax = plt.subplots(figsize=(20, 10))
- 
-# ローソク足チャートをプロット
-mpl_finance.candlestick_ohlc(ax, df.values, width=0.5, colorup='r', colordown='b')
-
-df.insert(0,"index",[x for x in range(len(df))])
-
-# 移動平均線をプロット
-ax.plot(df["index"], df["SMA5"], label="SMA5")
-ax.plot(df["index"], df["SMA25"], label="SMA25")
- 
-# X軸を調整
-plt.xticks([x for x in range(len(df))], [x.strftime('%Y-%m-%d') for x in df.index])
-fig.autofmt_xdate()
- 
-# 凡例表示
-plt.legend()
- 
-# グリッド表示
-plt.grid()
- 
-# グラフを表示
-plt.show()
+#-----------------------------------
+# 移動平均線の傾きによるトレンド判定
+# 引数：mode  (MODE_BUY=買い判定、MODE_SELL=売り判定)
+#     : df    データフレーム
+# 戻り値：0=売買シグナルなし, 1=売買シグナルあり
+#-----------------------------------
+def jdg_movave_trend(mode, df):
+    ret_sig = 0
+    taildf = df.tail(5)
+    sma1 = taildf["SMASET"].values[0]
+    sma2 = taildf["SMASET"].values[-1]
+    
+    # 買いモードの時
+    if mode == DEF.MODE_BUY:               
+        # 右肩上がりなら買い
+        if sma1 < sma2:
+            ret_sig = 1         # 買いシグナル設定
+    # 売りモードの時
+    elif mode == DEF.MODE_SELL:
+        # 右肩下がりなら売り
+        if sma1 > sma2:
+            ret_sig = 1         # 売りシグナル設定

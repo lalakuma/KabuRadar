@@ -1,17 +1,12 @@
-import pandas as pd
-import mplfinance as mpf
+import common_def as DEF
+import technical_MovingAve as tc_movave
+import technical_BreakOut as tc_break
+import technical_Beard as tc_beard
 import technical_MACD as tc_macd
 import technical_RSI as tc_rsi
 import sqlight as db
 import line
 from datetime import datetime, date, timedelta
-
-
-#****************************
-# 定義値
-#****************************
-MODE_SELL = 1
-MODE_BUY = 0
 
 #****************************
 # スクリーニング用の設定値
@@ -19,7 +14,7 @@ MODE_BUY = 0
 # 移動平均線の傾き確認に使用する値
 scr_lineave = 100
 # MACDとシグナルの開きに使用する値
-scr_macd = 5
+scr_macd_offset = 5
 # RSIの買いに採用する最大値
 scr_rsi_max = 65
 # RSIの売りに採用する最小値
@@ -33,21 +28,19 @@ scr_rsipass = 14
 # ブレイクアウト判定期間に使用する値
 scr_break = 5
 
-# SELL/BUY モード切替  (買い=MODE_BUY, 売り=MODE_SELL)
-sb_mode = MODE_SELL 
-
 #--------------------------------------
 # 有効判定設定
 #--------------------------------------
 # 移動平均判定
-judge_move  = False
+jdg_mov  = False
 # RSI判定
-judge_rsi  = True
+jdg_rsi  = True
 # MACD判定
-judge_macd  = True
+jdg_macd  = True
 # BREAK OUT判定
-judge_break  = True
-
+jdg_brk  = True
+# 髭判定
+jdg_berd = True
 #--------------------------------------
 # DBから全銘柄コードを取得
 #--------------------------------------
@@ -68,8 +61,17 @@ str_bef = datetime.strftime(today + timedelta(days = (-1) * scr_rsipass), '%Y-%m
 # 全銘柄コードリスト取得
 codes = db.read_code_all(cursor, "tbl_codelist")
 for md in range(2):
+    # SELL/BUY モード切替  (買い=MODE_BUY, 売り=MODE_SELL)
     # 初回ループはMODE_BUY、2回目はMODE_SELL
     sb_mode = md
+    # 買いモードの時
+    if sb_mode == DEF.MODE_BUY:     
+        limit_in_rsi = scr_b_rsi        # 過去にRSIが閾値内に入ったかチェック用の閾値
+        limit_now_rsi = scr_rsi_max     # RSI現在値の購入許可判定閾値
+    # 売りモードの時    
+    else:                           
+        limit_in_rsi = scr_s_rsi        # 過去にRSIが閾値内に入ったかチェック用の閾値
+        limit_now_rsi = scr_rsi_min     # RSI現在値の購入許可判定閾値
 
     # 銘柄コードリストに登録されている全コードに対して処理を行う
     for code in codes:
@@ -97,127 +99,66 @@ for md in range(2):
         # MACDとRSIを追加
         df_price = tc_macd.macd(df_price)
         df_price = tc_rsi.rsi(df_price)
+        # 過去指定日前からのRSIを取得
+        dfrsi = df_price.loc[str_bef:,["RSI"]]
 
         # 全情報をリストに追加
         #lst_dfprice.append(df_price)
 
-        # 終値取得
-        i_close = df_price["close"].values[-1]
-
     # 銘柄コードで調査用 
-    #    if str(code) == "9107":
-    #        print(code)
-    #
+        if str(code) == "9101":
+            print(code)
+            print(df_price)
+
+        # 終値取得
+        i_close = df_price["close"].values[-1]                  # 終値取得
+        i_open = df_price["open"].values[-1]                    # 始値取得
+        i_low = df_price["low"].values[-1]                      # 安値取得
+        i_high = df_price["high"].values[-1]                    # 高値取得
+   
         #----------------------
         # 移動平均判定
         #----------------------
-        if judge_move == True:                  # 移動平均判定が有効な時に実行
-            buy_smaset = 0 
-            taildf = df.tail(5)
-            sma1 = taildf["SMASET"].values[0]
-            sma2 = taildf["SMASET"].values[-1]
-            if sma1 <= sma2:
-                buy_smaset = 1 
-
-            if buy_smaset == 0:
+        if jdg_mov == True:                  # 移動平均判定が有効な時に実行
+            if tc_movave.jdg_movave_trend(sb_mode, df) == 0:
                 continue
-
         #----------------------
         # RSI判定
         #----------------------
-        if judge_rsi == True:                  # RSI判定が有効な時に実行
-            # 過去指定日前からのRSIを取得
-            dfrsi = df_price.loc[str_bef:,["RSI"]]
-
-            # RSI上限判定
-            nowrsi = dfrsi["RSI"].values[-1]
-
-            if sb_mode == MODE_BUY:
-                if nowrsi > scr_rsi_max:
-                    continue
-            elif sb_mode == MODE_SELL:
-                if nowrsi < scr_rsi_min:
-                    continue
-
-            # 過去指定期間でRSIが指定値を閾値を超えたらRSIシグナルスイッチを1にする
-            sigsw_rsi = 0
-            for i, row in dfrsi.iterrows():
-                rsi = row["RSI"]
-                # 買いシグナル判定
-                if sb_mode == MODE_BUY:
-                    if rsi <= scr_b_rsi:
-                        sigsw_rsi = 1
-                        break
-                # 売りシグナル判定
-                elif sb_mode == MODE_SELL:
-                    if rsi >= scr_s_rsi:
-                        sigsw_rsi = 1
-                        break
-            
-            if sigsw_rsi == 0:
+        if jdg_rsi == True:                  
+            # RSIの現在値が購入許可できる水準かを判定
+            if tc_rsi.jdg_rsi_level(sb_mode, dfrsi, limit_now_rsi) == 0:
                 continue
-
+            # 過去指定期間でRSIが指定値を閾値を超えたらRSIシグナルスイッチを1にする
+            if tc_rsi.jdg_rsi_entered(sb_mode, dfrsi, limit_in_rsi) == 0:
+                continue
         #----------------------
         # MACD判定
         #----------------------
-        if judge_macd == True:                  # MACD判定が有効な時に実行
-            # 最新のMACDとシグナルの値を取得
-            macd = df_price["MACD"].values[-1]
-            sig = df_price["Signal"].values[-1]
-            # MACD > SIGで買いシグナル
-            sigsw_macd = 0
-            # 買いシグナル判定
-            if sb_mode == MODE_BUY:
-                if macd > sig + scr_macd:
-                    sigsw_macd = 1
-            # 売りシグナル判定
-            elif sb_mode == MODE_SELL:
-                if macd < sig - scr_macd:
-                    sigsw_macd = 1
-
-            if sigsw_macd == 0:
+        if jdg_macd == True:                  
+            # MACDのクロスが発生した後かを判定
+            if tc_macd.jdg_macd_cross(sb_mode, df_price, scr_macd_offset) == 0:
                 continue
-
         #----------------------
         # ブレイクアウト判定
         #----------------------
-        if judge_break == True:                  # MACD判定が有効な時に実行
-            sigsw_break = 0
-            # 最後から指定期間分のレコードを取得
-            breakdf = df.tail(scr_break)
-
-            # 指定期間中の前日までで一番の高値を取得
-            size = len(breakdf)
-            breakdf = breakdf.set_index("datetime")
-            breakdf = breakdf.head(size - 1)
-
-            # 買いシグナル判定
-            if sb_mode == MODE_BUY:
-                df_max = breakdf.rolling(window=size-1).max()
-                max = df_max["high"].values[-1]
-                # 現在の価格が前日までの指定期間の高値を超えている場合に買いシグナルON
-                if i_close > max:
-                    sigsw_break = 1
-            # 売りシグナル判定
-            elif sb_mode == MODE_SELL:
-                df_min = breakdf.rolling(window=size-1).min()
-                min = df_min["high"].values[-1]
-                # 現在の価格が前日までの指定期間の高値を超えている場合に買いシグナルON
-                if i_close < min:
-                    sigsw_break = 1
-
-
-            if sigsw_break == 0:
+        if jdg_brk == True:
+            if tc_break.jdg_break_out(sb_mode, df, scr_break, i_close) == 0:
                 continue
-
+        #----------------------
+        # 髭判定
+        #----------------------
+        if jdg_berd == True:
+            if tc_beard.jdg_beard(sb_mode, i_open, i_high, i_low, i_close) == 0:
+                continue
         #----------------------
         # ここまで残ったコードをリストに追加
         #----------------------
-        print(code, ": RSI=", rsi)
+        print(code)
         str_close = "¥{:,d}".format(i_close)
-        if sb_mode == MODE_BUY:
+        if sb_mode == DEF.MODE_BUY:
             lst_codes.append(str(code) + "[新買]:" + str_close)
-        if sb_mode == MODE_SELL:
+        if sb_mode == DEF.MODE_SELL:
             lst_codes.append(str(code) + "[新売]:" + str_close)
 
 # LINEで結果を通知

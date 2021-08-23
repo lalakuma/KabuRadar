@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import common_def as DEF
 
 #################################################################
 #   RSIを算出する
@@ -78,16 +79,69 @@ def search_proper_rsi(df, low_per):
 
     dfrsicnt = dfrsi.groupby(['RSI']).count()
     total = dfrsicnt["count"].sum()
+
+#    pd.set_option('display.max_rows', 100)     # print表示行数を100行にする
+#    print(dfrsicnt)
+    
     wk = 0
     ruiseki = 0
     for row in dfrsicnt.itertuples():
         wk += row.count
         wkper = (wk / total) * 100
-        ruiseki += wkper
-        if low_per <= ruiseki:
+        if low_per <= wkper:
             get_rsi = row[0]
             break
 
     print("RSI=", get_rsi)
     return get_rsi
+
+
+#################################################################
+# 現在のRSIが購入を許可できる値であるかをチェックする
+# 引数：mode        (MODE_BUY=買い判定、MODE_SELL=売り判定)
+#     : dfrsi       データフレーム
+#     : limit       RSI閾値
+# 戻り値：0=売買シグナルなし, 1=売買シグナルあり
+#################################################################
+def jdg_rsi_level(sb_mode, dfrsi, limit):
+    sigsw_rsi = 0
+    # RSI上限判定
+    nowrsi = dfrsi["RSI"].values[-1]
+
+    # 買いシグナル判定
+    if sb_mode == DEF.MODE_BUY:
+        # リミット以下なら許可
+        if nowrsi <= limit:
+            sigsw_rsi = 1
+    # 売りシグナル判定
+    elif sb_mode == DEF.MODE_SELL:
+        # リミット以上なら許可
+        if nowrsi >= limit:
+            sigsw_rsi = 1
+
+    return sigsw_rsi   
+
+#################################################################
+# 過去指定期間でRSIが指定値を閾値内に入ったかどうかを判定する
+# 引数：mode        (MODE_BUY=買い判定、MODE_SELL=売り判定)
+#     : dfrsi       データフレーム
+#     : limit_rsi   RSI閾値
+# 戻り値：0=売買シグナルなし, 1=売買シグナルあり
+#################################################################
+def jdg_rsi_entered(sb_mode, dfrsi, limit_rsi):
+    sigsw_rsi = 0
+    for i, row in dfrsi.iterrows():
+        rsi = row["RSI"]
+        # 買いシグナル判定
+        if sb_mode == DEF.MODE_BUY:
+            if rsi <= limit_rsi:
+                sigsw_rsi = 1
+                break
+        # 売りシグナル判定
+        elif sb_mode == DEF.MODE_SELL:
+            if rsi >= limit_rsi:
+                sigsw_rsi = 1
+                break
+
+    return sigsw_rsi   
 
