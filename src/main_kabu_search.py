@@ -85,6 +85,11 @@ for code in codes:
     else:
         sb_mode = DEF.MODE_BUY  
 
+    # 銘柄コードで調査用 
+    if str(code) == "1801":
+        print(code)
+        print(df_price)
+
     #----------------------
     # ブレイクアウト判定
     #----------------------
@@ -112,8 +117,3 @@ line.line_notify(lst_codes)
 
 # DBクローズ
 db.close_db(conn)
-
-
-
-
-

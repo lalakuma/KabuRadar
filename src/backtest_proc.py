@@ -2,6 +2,7 @@ import common_def as DEF
 import pandas as pd
 import mplfinance as mpf
 import technical_MovingAve as tc_movave
+import technical_Bollinger as tc_bb
 import technical_BreakOut as tc_break
 import technical_Beard as tc_beard
 import technical_MACD as tc_macd
@@ -173,7 +174,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
     df_price["income"] = 0
     
     # 指標銘柄も日付をインデックスにする
-    df_indicator= df_indicator.set_index("datetime").loc[:,["close","SMA5","SMA25","SMA75"]]
+    #df_indicator= df_indicator.set_index("datetime").loc[:,["close","SMA5","SMA25","SMA75"]]
 
     print("sell_period :", Prm.sell_period)
 
@@ -181,6 +182,9 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
     df_price = tc_macd.macd(df_price)
 #    df_price = tc_rsi.rsi(df_price)
     df_price = tc_rsi.rsi_tradingview(df_price)
+    df_price = tc_bb.Bollinger(df_price)
+
+    print(df_price)
 
     if Prm.rsi_per != -1:
         Prm.adopt_rsi = tc_rsi.search_proper_rsi(df_price, Prm.rsi_per)
@@ -195,11 +199,34 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
         bkdf = bkdf.append(wkdf,ignore_index=True)
         if numpy.isnan(wkdf["SMASET"].values) == True:
             continue
+
+        #----------------------
+        # 日付取得
+        #----------------------
+        idx_date = row[0]
     
+
+        #----------------------
+        # 最新のMACDとシグナルの値を取得
+        #----------------------
+        macd = bkdf["MACD"].values[-1]
+        sig = bkdf["Signal"].values[-1]
+            
+        #----------------------
+        # 各時点の値を取得
+        #----------------------
+        i_open = row.open                           # 終値取得
+        i_close = row.close                         # 終値取得
+        i_low = row.low                             # 安値取得
+        i_high = row.high                           # 高値取得
+        i_sma5 = row.SMA5                           # 5日移動平均値取得
+
+
         #----------------------
         # 指標銘柄判定
         #----------------------
         if jdg_ind == True:
+            ind_sma5 = int(df_indicator.at[str(idx_date.date()), "SMA5"][0])
             ind_sma75 = int(df_indicator.at[str(idx_date.date()), "SMA75"][0])
             ind_close = df_indicator.at[str(idx_date.date()), "close"][0]
             
@@ -217,26 +244,26 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
 	                    continue
             # 要求売買モードが両建てモードの場合、売買モードを設定
             else:
+            	# 指標銘柄のMACDで売買モードを決める　（今一だった）
+#                ind_macd = df_indicator["MACD"].values[-1]
+#                ind_sig = df_indicator["Signal"].values[-1]
+#                if ind_macd > ind_sig:
+#                    sb_mode = DEF.MODE_BUY
+#                else:
+#                    sb_mode = DEF.MODE_SELL
+            	# 該当銘柄のMACDで売買モードを決める macd > sigで買いだとパフォーマンスが悪かったので逆にした（でも今一だった）
+#                if macd > sig:
+#                    sb_mode = DEF.MODE_SELL
+#                else:
+#                    sb_mode = DEF.MODE_BUY
                 # 指標が75日線より低い場合は売りモード
-                if ind_sma75 > ind_close:
+                #if ind_sma75 > ind_close:
+                if ind_sma5 > ind_close:
                     sb_mode = DEF.MODE_SELL
-                # 指標が75日線より高い場合は買いモード
+               # 指標が75日線より高い場合は買いモード
                 else:
                     sb_mode = DEF.MODE_BUY    
     
-
-        # 最新のMACDとシグナルの値を取得
-        macd = bkdf["MACD"].values[-1]
-        sig = bkdf["Signal"].values[-1]
-            
-        i_open = row.open                           # 終値取得
-        i_close = row.close                         # 終値取得
-        i_low = row.low                             # 安値取得
-        i_high = row.high                           # 高値取得
-        i_sma5 = row.SMA5                           # 5日移動平均値取得
-
-        # 日付取得
-        idx_date = row[0]
 
 #        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-06-21'):
 #            print(bkdf)
@@ -249,11 +276,11 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
 		#-----------------------
         sellgain = 0                            # 1回の売却利益初期化
         if sell_pos > 0:
-            # 売り保持期間を0にした場合は購入日翌日の始値で売り
+            # 売り保持期間を0にした場合は購入日翌日の始値で売り （1(終値まで持つ)にしたらパフォーマンス落がちた）
             if 0 == Prm.sell_period:
                 kessai_sell = True
                 sell_kessai_val = i_open
-            
+
             #-----------------------------
             # 決済処理
             #-----------------------------
@@ -382,6 +409,35 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
         #===========================================================================#
         # ここから購入判定処理
         #===========================================================================#
+        #----------------------
+        # ローソク足判定
+        #----------------------
+        # ローソクが陽線か陰線かを判別
+        diff = i_close - i_open             # 始値と現在値の差分から実線の長さを設定
+        if diff >= 0:
+            line_kind = 1                   # ライン種別を陽線に設定
+        else:
+            line_kind = 0                   # ライン種別を陰線に設定
+
+        # 買いモードかつローソク足が陰線は処理しない
+        if sb_mode == DEF.MODE_BUY and line_kind == 0:
+            continue
+        # 売りモードかつローソク足が陽線は処理しない
+        if sb_mode == DEF.MODE_SELL and line_kind == 1:
+            continue
+
+        #********************************************************
+        # オーバーナイト投資向けの判定　↓↓↓（ここから）
+        #********************************************************
+        #--------------------------------------
+        # ボリンジャーバンドで2σを大きく超えていること
+        #--------------------------------------
+        if tc_bb.jdg_Bollinger_over2(sb_mode, bkdf, 10) == 0:
+            continue
+    
+        #********************************************************
+        # オーバーナイト投資向けの判定　↑↑↑（ここまで）
+        #********************************************************
 
         #----------------------
         # 移動平均判定

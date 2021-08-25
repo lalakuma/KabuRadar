@@ -43,7 +43,7 @@ CD_NIKKEI = 1321
 code = CD_NIKKEI
 
 # 指標株価を取得する
-df_nikkei = pkabu.getIndexData(code, PAST_PERIOD, conn, cursor)
+df_nikkei = pkabu.getPeriodKabuData(code, PAST_PERIOD, conn, cursor)
 # 銘柄コードリストに登録されている全コードに対して処理を行う
 for code in codes:
     # 対象銘柄に対するインデックス銘柄を設定する（今は日経225ETF）
@@ -58,7 +58,7 @@ for code in codes:
         code = 4523
 #        cls_dt = bktst.KabInf(sell_period = 1, rsi_max=100, breakout=5, macd_offset=5, lineave=200, past_period=(-3000), rsi_per=30)
         cls_dt = bktst.KabInf(sell_period = 0,
-                                rsi_max=300, 
+                                rsi_max=100, 
                                 rsi_period = 14,
                                 breakout=5, 
                                 macd_offset=5, 
@@ -84,7 +84,8 @@ for code in codes:
         result = bktst.backtst_proc(code,
                                 df_indicator,
                                 cls_dt, 
-                                sb_mode = DEF.MODE_SELL, 
+                                req_sb_mode = DEF.MODE_BOTH, 
+                                jdg_ind=True, 
                                 jdg_mov=False, 
                                 jdg_rsi=False, 
                                 jdg_macd=False, 

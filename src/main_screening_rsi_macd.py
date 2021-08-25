@@ -63,15 +63,6 @@ codes = db.read_code_all(cursor, "tbl_codelist")
 for md in range(2):
     # SELL/BUY モード切替  (買い=MODE_BUY, 売り=MODE_SELL)
     # 初回ループはMODE_BUY、2回目はMODE_SELL
-    sb_mode = md
-    # 買いモードの時
-    if sb_mode == DEF.MODE_BUY:     
-        limit_in_rsi = scr_b_rsi        # 過去にRSIが閾値内に入ったかチェック用の閾値
-        limit_now_rsi = scr_rsi_max     # RSI現在値の購入許可判定閾値
-    # 売りモードの時    
-    else:                           
-        limit_in_rsi = scr_s_rsi        # 過去にRSIが閾値内に入ったかチェック用の閾値
-        limit_now_rsi = scr_rsi_min     # RSI現在値の購入許可判定閾値
 
     # 銘柄コードリストに登録されている全コードに対して処理を行う
     for code in codes:
@@ -106,16 +97,44 @@ for md in range(2):
         #lst_dfprice.append(df_price)
 
     # 銘柄コードで調査用 
-        if str(code) == "9101":
-            print(code)
-            print(df_price)
+ #       if str(code) == "9101":
+ #           print(code)
+ #           print(df_price)
 
         # 終値取得
         i_close = df_price["close"].values[-1]                  # 終値取得
         i_open = df_price["open"].values[-1]                    # 始値取得
         i_low = df_price["low"].values[-1]                      # 安値取得
         i_high = df_price["high"].values[-1]                    # 高値取得
-   
+
+
+        sb_mode = md
+        # 買いモードの時
+        if sb_mode == DEF.MODE_BUY:     
+            limit_in_rsi = scr_b_rsi        # 過去にRSIが閾値内に入ったかチェック用の閾値
+            limit_now_rsi = scr_rsi_max     # RSI現在値の購入許可判定閾値
+        # 売りモードの時    
+        else:                           
+            limit_in_rsi = scr_s_rsi        # 過去にRSIが閾値内に入ったかチェック用の閾値
+            limit_now_rsi = scr_rsi_min     # RSI現在値の購入許可判定閾値
+
+        #----------------------
+        # ローソク足判定
+        #----------------------
+        # ローソクが陽線か陰線かを判別
+        diff = i_close - i_open             # 始値と現在値の差分から実線の長さを設定
+        if diff >= 0:
+            line_kind = 1                   # ライン種別を陽線に設定
+        else:
+            line_kind = 0                   # ライン種別を陰線に設定
+
+        # 買いモードかつローソク足が陰線は処理しない
+        if sb_mode == DEF.MODE_BUY and line_kind == 0:
+            continue
+        # 売りモードかつローソク足が陽線は処理しない
+        if sb_mode == DEF.MODE_SELL and line_kind == 1:
+            continue
+        
         #----------------------
         # 移動平均判定
         #----------------------
@@ -163,9 +182,3 @@ for md in range(2):
 
 # LINEで結果を通知
 line.line_notify(lst_codes)
-
-
-
-
-
-
