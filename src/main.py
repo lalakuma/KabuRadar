@@ -13,7 +13,7 @@ conn, cursor = db.connect_db()
 lst_dfprice = []
 
 # 個別銘柄 全データ取得
-#df_price = db.read_rec_all(conn, cursor, "1332")
+#df_price = db.read_rec_all(conn, cursor, "tbl_1332")
 
 # 個別銘柄 期間データ取得
 today = str(date.today())

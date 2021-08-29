@@ -128,10 +128,13 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
     minusgain = 0.0
     loss_line = 0
     loopmax = 1
+    ind_presma5 = 0
+    ind_presma75 = 0
+    ind_preclose = 0
+    i_presma15 = 0
     
     if req_sb_mode != DEF.MODE_BOTH:
     	sb_mode = req_sb_mode
-    
     
     # 個別銘柄 期間データ取得
     today = date.today()                                                          # 今日(日付型)
@@ -152,7 +155,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
         df['close'] = df['close'].astype('int64')
         df['volume'] = df['volume'].astype('int64')
         df['SMA5'] = df['close'].rolling(window=5).mean()               # 5日移動平均を追加
-        df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
+        df['SMA15'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
         df['SMASET'] = df['close'].rolling(window=Prm.lineave).mean()   # 設定した移動平均を追加
     except:
         print(code + ": Error")
@@ -166,7 +169,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
         return (-1)
 
     #日付をインデックスにして、必要なアイテム順に並び替え
-    df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA25","SMASET"]]
+    df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA15","SMASET"]]
     df_price["mark"] = ""
     df_price["buy"] = 0
     df_price["buygain"] = 0
@@ -185,7 +188,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
     df_price = tc_rsi.rsi_tradingview(df_price)
     df_price = tc_bb.Bollinger(df_price)
 
-    print(df_price)
+#    print(df_price)
 
     if Prm.rsi_per != -1:
         Prm.adopt_rsi = tc_rsi.search_proper_rsi(df_price, Prm.rsi_per)
@@ -206,7 +209,6 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
         #----------------------
         idx_date = row[0]
     
-
         #----------------------
         # 最新のMACDとシグナルの値を取得
         #----------------------
@@ -221,15 +223,25 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
         i_low = row.low                             # 安値取得
         i_high = row.high                           # 高値取得
         i_sma5 = row.SMA5                           # 5日移動平均値取得
+        i_sma15 = row.SMA15                         # 15日移動平均値取得
 
 
         #----------------------
         # 指標銘柄判定
         #----------------------
         if jdg_ind == True:
-            ind_sma5 = int(df_indicator.at[str(idx_date.date()), "SMA5"][0])
-            ind_sma75 = int(df_indicator.at[str(idx_date.date()), "SMA75"][0])
-            ind_close = df_indicator.at[str(idx_date.date()), "close"][0]
+            try:
+                ind_sma5 = int(df_indicator.at[str(idx_date.date()), "SMA5"][0])
+                ind_sma75 = int(df_indicator.at[str(idx_date.date()), "SMA75"][0])
+                ind_close = df_indicator.at[str(idx_date.date()), "close"][0]
+            except:
+                print(str(idx_date.date()),'指標移動平均値取得エラー')
+                ind_sma5 = ind_presma5
+                ind_sma75 = ind_presma75
+                ind_close = ind_preclose
+
+
+
             
             # 要求売買モードが両建てモードではない場合
             if req_sb_mode != DEF.MODE_BOTH:
@@ -245,7 +257,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
 	                    continue
             # 要求売買モードが両建てモードの場合、売買モードを設定
             else:
-                loopmax = 2
+                #loopmax = 2  #debug_morino 
+                loopmax = 1
             	# 指標銘柄のMACDで売買モードを決める　（今一だった）
 #                ind_macd = df_indicator["MACD"].values[-1]
 #                ind_sig = df_indicator["Signal"].values[-1]
@@ -258,20 +271,28 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
 #                    sb_mode = DEF.MODE_SELL
 #                else:
 #                    sb_mode = DEF.MODE_BUY
-                # 指標が75日線より低い場合は売りモード
-                #if ind_sma75 > ind_close:
                 #if ind_sma5 > ind_close:       (75のほうがちょっとよかった)
-#                    sb_mode = DEF.MODE_SELL
-               # 指標が75日線より高い場合は買いモード
-#                else:
-#                    sb_mode = DEF.MODE_BUY    
+                # 指標が75日線より低い場合は売りモード
+#                if ind_sma75 > ind_close:
+                # 指標の移動平均値が前日よりも低ければ売りモード
+#                if  ind_presma5 > ind_sma5:    (75のほうがちょっとよかったけど5の上下よりはいい)
+                if i_sma15 < i_presma15:
+                    sb_mode = DEF.MODE_SELL
+                else:
+                    sb_mode = DEF.MODE_BUY
+
+            # 前回値を更新
+            ind_presma5 = ind_sma5
+            ind_presma75 = ind_sma75
+            ind_preclose = ind_close
+            i_presma15 = i_sma15
     
         for sb in range(loopmax):
-            if req_sb_mode == DEF.MODE_BOTH:
-                sb_mode = sb
+#            if req_sb_mode == DEF.MODE_BOTH:
+#                sb_mode = sb
 
-    #        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-06-21'):
-    #            print(bkdf)
+            if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-07-20'):
+                print(bkdf)
             #==============================================================================================
             # 売却処理
             #==============================================================================================
@@ -424,6 +445,10 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
             else:
                 line_kind = 0                   # ライン種別を陰線に設定
 
+            # ローソクの大きさが1%未満は処理しない
+            if abs(diff) < abs(i_close * 0.01):
+                continue
+
             # 買いモードかつローソク足が陰線は処理しない
             if sb_mode == DEF.MODE_BUY and line_kind == 0:
                 continue
@@ -431,19 +456,20 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_ind =
             if sb_mode == DEF.MODE_SELL and line_kind == 1:
                 continue
 
-            #********************************************************
-            # オーバーナイト投資向けの判定　↓↓↓（ここから）
-            #********************************************************
             #--------------------------------------
-            # ボリンジャーバンドで2σを大きく超えていること
+            # 指定期間内でボリンジャーバンドで2σを大きく超えている日があること
+            # ない(False)場合は終了
             #--------------------------------------
-            if tc_bb.jdg_Bollinger_over2(sb_mode, bkdf, 10) == 0:
+            if tc_bb.jdg_Bollinger_over2(sb_mode, bkdf, 10) == False:
+                continue
+
+            #--------------------------------------------------------
+            # 当日高値値がボリンジャーバンドで3σを大きく超えていないことを確認 
+            # 超えている(True)場合は終了
+            #--------------------------------------------------------
+            if tc_bb.jdg_Bollinger_over3(sb_mode, bkdf, i_high) == True:
                 continue
         
-            #********************************************************
-            # オーバーナイト投資向けの判定　↑↑↑（ここまで）
-            #********************************************************
-
             #----------------------
             # 移動平均判定
             #----------------------

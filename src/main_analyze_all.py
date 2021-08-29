@@ -4,7 +4,6 @@ import backtest_proc as bktst
 import main_write_shuukei_csv as shuukei
 import getPeriodKabu as pkabu
 from datetime import datetime, date, timedelta
-
 ############################################
 # 結果をCSVファイルに書き込む
 ############################################
@@ -27,7 +26,8 @@ conn, cursor = db.connect_db()
 # 全銘柄コードリスト取得
 codes = db.read_code_all(cursor, "tbl_codelist")
 
-PAST_PERIOD=(-1000)     # 過去1000日間のデータを検証
+#PAST_PERIOD=(-4600)     # 過去4600日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
+PAST_PERIOD=(-1000)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 cls_dt = bktst.KabInf(sell_period = 0,
                         rsi_max=100, 
                         rsi_period = 14,
@@ -44,8 +44,19 @@ code = CD_NIKKEI
 
 # 指標株価を取得する
 df_nikkei = pkabu.getPeriodKabuData(code, PAST_PERIOD, conn, cursor)
+
+# 設定テーブル 全データ取得
+df_set = db.read_rec_all(conn, cursor, "tbl_code_set")
+df_set = df_set.set_index('Code')
+
 # 銘柄コードリストに登録されている全コードに対して処理を行う
 for code in codes:
+    #codeが無効に設定されている場合は処理しない
+    code_ena = df_set.at[str(code), 'Enable']
+    if code_ena == 0:
+        continue
+
+
     # 対象銘柄に対するインデックス銘柄を設定する（今は日経225ETF）
     df_indicator = df_nikkei
 
@@ -85,12 +96,12 @@ for code in codes:
                                 df_indicator,
                                 cls_dt, 
                                 req_sb_mode = DEF.MODE_BOTH, 
-                                jdg_ind=True, 
-                                jdg_mov=False, 
-                                jdg_rsi=False, 
-                                jdg_macd=False, 
-                                jdg_brk=True, 
-                                jdg_berd=True)            # テスト実行処理
+                                jdg_ind=True,               # 指標銘柄判定
+                                jdg_mov=False,              # 移動平均線判定
+                                jdg_rsi=False,              # RSI判定
+                                jdg_macd=False,             # MACD判定
+                                jdg_brk=True,               # ブレイク判定
+                                jdg_berd=True)              # 髭判定
         if result == -1:
             continue
    
@@ -102,3 +113,4 @@ db.close_db(conn)
 
 # 集計処理
 shuukei.shuukei_toCsv()
+shuukei.shuukei_makeExl()

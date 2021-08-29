@@ -40,6 +40,16 @@ def create_codelisttbl(conn, cursor):
     conn.commit()
 
 ##########################################################################
+#   銘柄毎の設定情報テーブルを作成する
+#   (既に存在する場合は作成しない)
+##########################################################################
+def create_codesettbl(conn, cursor):
+    sql = 'create table if not exists tbl_code_set(Code text PRIMARY KEY, Enable integer)'
+    cursor.execute(sql)#executeコマンドでSQL文を実行
+    
+    conn.commit()
+
+##########################################################################
 #   全テーブルのリストを取得
 ##########################################################################
 def get_tablelist(conn, cursor):
@@ -128,6 +138,23 @@ def exist_data(cursor, tbl, clm, joken):
 #    sql = 'UPDATE ' + tbl + ' SET name=""Bobby"", date=""19880116"" WHERE id=0'
 #    cursor.execute(sql)#executeコマンドでSQL文を実行
 #    conn.commit()#コミットする
+
+##########################################################################
+#   コード設定テーブルに1レコードを追加する(DF版)
+#   既にレコードがある場合は削除してから追加する
+##########################################################################
+def add_settbl_record(conn, df):
+    # データベースに追加
+    # code, Enable
+    print(df)
+    df.to_sql('tbl_code_set', conn, if_exists = 'append')
+##########################################################################
+#   コード設定テーブルのEnable設定を更新
+##########################################################################
+def update_codelist_enable(conn, cursor, tbl, df):
+    sql = 'UPDATE ' + tbl + ' SET Enable=' + df.Enable + ' WHERE code=' + str(df.code)
+    cursor.execute(sql)#executeコマンドでSQL文を実行
+    conn.commit()#コミットする
 
 ##########################################################################
 #   マージ (codelist)
@@ -219,12 +246,12 @@ def read_rec_period(conn, cursor, code, start, end):
 ##########################################################################
 #   全レコードを読みだす
 ##########################################################################
-def read_rec_all(conn, cursor, code):
+def read_rec_all(conn, cursor, tbl):
     """
     select * ですべてのデータを参照し、fromでどのテーブルからデータを呼ぶのか指定
     fetchallですべての行のデータを取り出す
     """
-    sql = 'SELECT * FROM tbl_' + code
+    sql = 'SELECT * FROM ' + tbl
 #    cursor.execute(sql)
 #    print(cursor.fetchall())#全レコードを取り出す
     df = pd.read_sql(sql, conn)

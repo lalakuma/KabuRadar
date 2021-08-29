@@ -4,6 +4,7 @@ import technical_BreakOut as tc_break
 import technical_Beard as tc_beard
 import technical_MACD as tc_macd
 import technical_RSI as tc_rsi
+import technical_Bollinger as tc_bb
 import sqlight as db
 import line
 from datetime import datetime, date, timedelta
@@ -90,6 +91,7 @@ for md in range(2):
         # MACDとRSIを追加
         df_price = tc_macd.macd(df_price)
         df_price = tc_rsi.rsi(df_price)
+        df_price = tc_bb.Bollinger(df_price)
         # 過去指定日前からのRSIを取得
         dfrsi = df_price.loc[str_bef:,["RSI"]]
 
