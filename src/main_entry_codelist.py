@@ -68,7 +68,7 @@ for code, name in df.iterrows():
     if exi == False:
         # コードと有効設定を登録（登録時は無効。後で有益性をチェックしてから有効にする為）
         df_ena = pd.DataFrame(columns=['Code', 'Enable'])
-        df_ena = df_ena.append({'Code': code, 'Enable': '0'}, ignore_index=True)
+        df_ena = df_ena.append({'Code': code, 'Enable': '1'}, ignore_index=True)
         df_ena = df_ena.set_index('Code')
         # DBに1レコード追加
         db.add_settbl_record(conn, df_ena) 

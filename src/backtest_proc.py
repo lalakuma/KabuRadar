@@ -130,7 +130,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
     ind_presma5 = 0
     ind_presma75 = 0
     ind_preclose = 0
-    i_presma15 = 0
+    i_presma25 = 0
     sb_mode = DEF.MODE_BUY  # 初期値は買い
     
     if req_sb_mode != DEF.MODE_BOTH:
@@ -155,7 +155,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         df['close'] = df['close'].astype('int64')
         df['volume'] = df['volume'].astype('int64')
         df['SMA5'] = df['close'].rolling(window=5).mean()               # 5日移動平均を追加
-        df['SMA15'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
+        df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
         df['SMASET'] = df['close'].rolling(window=Prm.lineave).mean()   # 設定した移動平均を追加
     except:
         print(code + ": Error")
@@ -169,7 +169,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         return (-1)
 
     #日付をインデックスにして、必要なアイテム順に並び替え
-    df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA15","SMASET"]]
+    df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA25","SMASET"]]
     df_price["mark"] = ""
     df_price["buy"] = 0
     df_price["buygain"] = 0
@@ -184,8 +184,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
 
     # MACDとRSIを追加
     df_price = tc_macd.macd(df_price)
-#    df_price = tc_rsi.rsi(df_price)
-    df_price = tc_rsi.rsi_tradingview(df_price)
+#    df_price = tc_rsi.rsi(df_price)				// SBI證券アプリで見るRSIに近い計算方法
+    df_price = tc_rsi.rsi_tradingview(df_price)		// Tradingviewで見るRSIに近い計算方法
     df_price = tc_bb.Bollinger(df_price)
 
 #    print(df_price)
@@ -223,7 +223,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         i_low = row.low                             # 安値取得
         i_high = row.high                           # 高値取得
         i_sma5 = row.SMA5                           # 5日移動平均値取得
-        i_sma15 = row.SMA15                         # 15日移動平均値取得
+        i_sma25 = row.SMA25                         # 25日移動平均値取得
 
 
         #----------------------
@@ -271,7 +271,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
                 if ind_sma75 > ind_close:
                 # 指標の移動平均値が前日よりも低ければ売りモード
 #                if  ind_presma5 > ind_sma5:    (75のほうがちょっとよかったけど5の上下よりはいい)
-#                if i_sma15 < i_presma15:
+#                if i_sma25 < i_presma25:
                     sb_mode = DEF.MODE_SELL
                 else:
                     sb_mode = DEF.MODE_BUY
@@ -280,7 +280,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
             ind_presma5 = ind_sma5
             ind_presma75 = ind_sma75
             ind_preclose = ind_close
-            i_presma15 = i_sma15
+            i_presma25 = i_sma25
         else: # 指標判定が有効でない時は自銘柄の短期とで売買を判定する
             # 両建ての場合
             if req_sb_mode == DEF.MODE_BOTH:
@@ -291,8 +291,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
                     sb_mode = DEF.MODE_BUY
 
     
-        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-07-20'):
-            print(bkdf)
+#        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-07-20'):
+#            print(bkdf)
         #==============================================================================================
         # 売却処理
         #==============================================================================================

@@ -4,8 +4,9 @@ import sqlight as db
 # CODEの有効無効設定
 ############################################
 def set_code_enable():
-    targetfile = "PF2.73_W1767L1066_rate61.9_rieki4662900.csv"
-    path = "C:\MorinoFolder\Python\KabuRadar\同日の両建てはなしバージョン\\1.analys_PF2.73_W1767L1066_rate61.9_rieki4662900_bb2 of1.5\\"
+    targetfile = "PF1.33_W8465L6908_rate54.5_rieki6457900.csv"
+    #path = "C:\MorinoFolder\Python\KabuRadar\同日の両建てはなしバージョン\\1.analys_PF2.73_W1767L1066_rate61.9_rieki4662900_bb2 of1.5\\"
+    path = "C:\MorinoFolder\Python\KabuRadar\\analys_PF1.33_W8465L6908_rate54.5_rieki6457900_買のみブレイクのみ_安定\\"
     dirname = path + targetfile
     df_csv = pd.read_csv(dirname, encoding="ms932", sep=",")    
 
