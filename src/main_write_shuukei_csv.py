@@ -8,10 +8,11 @@ import copy
 
 def shuukei_makeExl():
     fileShukei = "集計.xlsx"
-    path = "C:\\MorinoFolder\\Python\\KabuRadar\\analys\\"
+#    path = "C:\\MorinoFolder\\Python\\KabuRadar\\analys\\"
+    path = "E:\\KabuRadar\\analys\\"
 
     # フォルダ内の全ファイルを取得
-    allFiles = glob.glob(path + "/*.csv") # 指定したフォルダーの全エクセルファイルを変数に代入します
+    allFiles = glob.glob(path + "\*.csv") # 指定したフォルダーの全エクセルファイルを変数に代入します
     df = pd.DataFrame()
     list_ = []
     # フォルダ内のファイルを全て処理する
@@ -55,7 +56,8 @@ def shuukei_makeExl():
             continue
         # 日付が一致するものを抽出
         df_samedate = (df_con[df_con["Index"].str.contains(date[:10])])
-        df_samedate = df_samedate.sort_values("close")
+        df_samedate = df_samedate.sort_values("close", ascending=False)    # 高額順
+#        df_samedate = df_samedate.sort_values("close", ascending=True)      # 低額順
 
         # 同一日付内でループ
         for samerow in df_samedate.itertuples():
@@ -174,4 +176,4 @@ def shuukei_toCsv():
         df.to_csv(strpath, encoding="shift_jis")    
     
 #shuukei_toCsv()
-shuukei_makeExl()
+#shuukei_makeExl()

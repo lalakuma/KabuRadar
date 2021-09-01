@@ -26,12 +26,13 @@ conn, cursor = db.connect_db()
 # 全銘柄コードリスト取得
 codes = db.read_code_all(cursor, "tbl_codelist")
 
-#PAST_PERIOD=(-4600)     # 過去4600日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
-PAST_PERIOD=(-1000)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
+#PAST_PERIOD=(-4600)     # (最古)過去4600日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
+PAST_PERIOD=(-2000)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
+#PAST_PERIOD=(-1000)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 cls_dt = bktst.KabInf(sell_period = 0,
                         rsi_max=100, 
                         rsi_period = 14,
-                        breakout=5, 
+                        breakout=6, 
                         macd_offset=5, 
                         lineave=100, 
                         past_period=PAST_PERIOD, 
@@ -68,22 +69,24 @@ for code in codes:
         ### 単発テスト用 ↓↓↓↓ STA ################################################
         code = 4523
 #        cls_dt = bktst.KabInf(sell_period = 1, rsi_max=100, breakout=5, macd_offset=5, lineave=200, past_period=(-3000), rsi_per=30)
-        cls_dt = bktst.KabInf(sell_period = 0,
-                                rsi_max=100, 
-                                rsi_period = 14,
-                                breakout=5, 
-                                macd_offset=5, 
-                                lineave=100, 
-                                past_period=PAST_PERIOD, 
-                                rsi_per=30)
-        result = bktst.backtst_proc(code,
-                                cls_dt, 
-                                sb_mode = DEF.MODE_BUY, 
-                                jdg_mov=False, 
-                                jdg_rsi=False, 
-                                jdg_macd=False, 
-                                jdg_brk=True, 
-                                jdg_berd=True)            # テスト実行処理
+        # cls_dt = bktst.KabInf(sell_period = 0,
+        #                         rsi_max=100, 
+        #                         rsi_period = 14,
+        #                         breakout=5, 
+        #                         macd_offset=5, 
+        #                         lineave=100, 
+        #                         past_period=PAST_PERIOD, 
+        #                         rsi_per=30)
+        # result = bktst.backtst_proc(code,
+        #                         cls_dt, 
+        #                         sb_mode = DEF.MODE_BOTH, 
+        #                         jdg_candle = False,
+        #                         jdg_bolin=True, 
+        #                         jdg_mov=False, 
+        #                         jdg_rsi=False, 
+        #                         jdg_macd=False, 
+        #                         jdg_brk=True, 
+        #                         jdg_berd=True)            # テスト実行処理
         if result == -1:
             continue
         else:
@@ -95,13 +98,14 @@ for code in codes:
         result = bktst.backtst_proc(code,
                                 df_indicator,
                                 cls_dt, 
-                                req_sb_mode = DEF.MODE_BOTH, 
-                                jdg_ind=True,               # 指標銘柄判定
+                                req_sb_mode = DEF.MODE_BUY, 
+                                jdg_candle = False,          # ローソク足判定
+                                jdg_ind=False,               # 指標銘柄判定
                                 jdg_mov=False,              # 移動平均線判定
                                 jdg_rsi=False,              # RSI判定
                                 jdg_macd=False,             # MACD判定
                                 jdg_brk=True,               # ブレイク判定
-                                jdg_berd=True)              # 髭判定
+                                jdg_berd=False)              # 髭判定
         if result == -1:
             continue
    
