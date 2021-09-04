@@ -12,8 +12,8 @@ lst_codes = []
 #****************************
 # スクリーニング用の設定値
 #****************************
-# ブレイクアウト判定期間に使用する値
-scr_break = 5
+# ブレイクアト判定期間に使用する値
+scr_break = 6
 #--------------------------------------
 # 有効判定設定
 #--------------------------------------
@@ -44,11 +44,21 @@ str_date_end = datetime.strftime(today + timedelta(days = 1), '%Y-%m-%d')       
 str_today = datetime.strftime(today, '%Y-%m-%d')                                        # 今日
 str_bef = datetime.strftime(today + timedelta(days = PAST_PERIOD), '%Y-%m-%d')          # 指定日前
 
+# 設定テーブル 全データ取得
+df_set = db.read_rec_all(conn, cursor, "tbl_code_set")
+df_set = df_set.set_index('Code')
+
 # 全銘柄コードリスト取得
 codes = db.read_code_all(cursor, "tbl_codelist")
+sb_mode = DEF.MODE_BUY
 
 # 銘柄コードリストに登録されている全コードに対して処理を行う
 for code in codes:
+    #codeが無効に設定されている場合は処理しない
+    code_ena = df_set.at[str(code), 'Enable']
+    if code_ena == 0:
+        continue
+
     # 指定期間のデータをDBから読み出す
     df = db.read_rec_period(conn, cursor, str(code), str_date_sta, str_date_end)
     #df.columns = ["datetime","open","high","low","close","volume"]
@@ -79,17 +89,18 @@ for code in codes:
     ind_sma75 = int(df_indicator["SMA75"].values[-1])
     ind_close = df_indicator["close"].values[-1]
 
-    # 指標銘柄の75日線より売買モードを設定
-    if ind_sma75 > ind_close:
-        sb_mode = DEF.MODE_SELL
-    else:
-        sb_mode = DEF.MODE_BUY  
-
     # 銘柄コードで調査用 
-    if str(code) == "1801":
-        print(code)
-        print(df_price)
+#    if str(code) == "1801":
+#        print(code)
+#        print(df_price)
 
+
+    #----------------------
+    # 価格判定
+    #----------------------
+    # 最新価格が10000を超える株は対象外とする（資金的にまだ早い）
+    if i_close > 10000:
+        continue
     #----------------------
     # ブレイクアウト判定
     #----------------------
@@ -105,15 +116,17 @@ for code in codes:
     #----------------------
     # ここまで残ったコードをリストに追加
     #----------------------
-    print(code)
     str_close = "¥{:,d}".format(i_close)
     if sb_mode == DEF.MODE_BUY:
-        lst_codes.append(str(code) + "[新買]:" + str_close)
+        strmsg = str(code) + "[新買]:" + str_close
     if sb_mode == DEF.MODE_SELL:
-        lst_codes.append(str(code) + "[新売]:" + str_close)
+        strmsg = str(code) + "[新売]:" + str_close
+    lst_codes.append(strmsg)
+    print(strmsg)
 
 # LINEで結果を通知
 line.line_notify(lst_codes)
+
 
 # DBクローズ
 db.close_db(conn)

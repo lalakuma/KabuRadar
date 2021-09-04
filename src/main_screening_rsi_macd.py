@@ -27,11 +27,13 @@ scr_s_rsi = 85
 # RSI閾値超過後の猶予日数に使用する値
 scr_rsipass = 14
 # ブレイクアウト判定期間に使用する値
-scr_break = 5
+scr_break = 6
 
 #--------------------------------------
 # 有効判定設定
 #--------------------------------------
+# 判定ローソク判定
+jdg_candle  = False
 # 移動平均判定
 jdg_mov  = False
 # RSI判定
@@ -54,7 +56,7 @@ lst_codes = []
 
 # 個別銘柄 期間データ取得
 today = date.today()                                                                    # 今日(日付型)
-str_date_sta = datetime.strftime(today + timedelta(days = (scr_lineave * (-1))-10), '%Y-%m-%d')  # 開始日(移動平均線を出せる日付を指定)
+str_date_sta = datetime.strftime(today + timedelta(days = (scr_lineave * (-1))-10), '%Y-%m-%d')  # 開始日(移動平均線を出せる日付を指定すること)
 str_date_end = datetime.strftime(today + timedelta(days = 1), '%Y-%m-%d')               # 明日
 str_today = datetime.strftime(today, '%Y-%m-%d')                                        # 今日
 str_bef = datetime.strftime(today + timedelta(days = (-1) * scr_rsipass), '%Y-%m-%d')   # 指定日前
@@ -123,19 +125,24 @@ for md in range(2):
         #----------------------
         # ローソク足判定
         #----------------------
-        # ローソクが陽線か陰線かを判別
-        diff = i_close - i_open             # 始値と現在値の差分から実線の長さを設定
-        if diff >= 0:
-            line_kind = 1                   # ライン種別を陽線に設定
-        else:
-            line_kind = 0                   # ライン種別を陰線に設定
-
-        # 買いモードかつローソク足が陰線は処理しない
-        if sb_mode == DEF.MODE_BUY and line_kind == 0:
-            continue
-        # 売りモードかつローソク足が陽線は処理しない
-        if sb_mode == DEF.MODE_SELL and line_kind == 1:
-            continue
+        if jdg_candle == True:
+	        # ローソクが陽線か陰線かを判別
+	        diff = i_close - i_open             # 始値と現在値の差分から実線の長さを設定
+	        if diff >= 0:
+	            line_kind = 1                   # ライン種別を陽線に設定
+	        else:
+	            line_kind = 0                   # ライン種別を陰線に設定
+	
+	        # ローソクの大きさが1%未満は処理しない (2%にしたら悪くなった)
+	        if abs(diff) < abs(i_close * 0.01):
+	            continue
+		
+	        # 買いモードかつローソク足が陰線は処理しない
+	        if sb_mode == DEF.MODE_BUY and line_kind == 0:
+	            continue
+	        # 売りモードかつローソク足が陽線は処理しない
+	        if sb_mode == DEF.MODE_SELL and line_kind == 1:
+	            continue
         
         #----------------------
         # 移動平均判定

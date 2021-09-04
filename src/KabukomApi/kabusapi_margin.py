@@ -2,10 +2,12 @@ import urllib.request
 import json
 import pprint
 
+def get_margin(token):
 url = 'http://localhost:18080/kabusapi/wallet/margin'
 req = urllib.request.Request(url, method='GET')
 req.add_header('Content-Type', 'application/json')
-req.add_header('X-API-KEY', 'ed94b0d34f9441c3931621e55230e402')
+#	req.add_header('X-API-KEY', 'ed94b0d34f9441c3931621e55230e402')
+	req.add_header('X-API-KEY', token)
 
 try:
     with urllib.request.urlopen(req) as res:
@@ -21,3 +23,5 @@ except urllib.error.HTTPError as e:
     pprint.pprint(content)
 except Exception as e:
     print(e)
+	    
+	return content

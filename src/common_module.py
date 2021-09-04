@@ -6,7 +6,7 @@ import sqlight as db
 def set_code_enable():
     targetfile = "PF1.33_W8465L6908_rate54.5_rieki6457900.csv"
     #path = "C:\MorinoFolder\Python\KabuRadar\同日の両建てはなしバージョン\\1.analys_PF2.73_W1767L1066_rate61.9_rieki4662900_bb2 of1.5\\"
-    path = "C:\MorinoFolder\Python\KabuRadar\\analys_PF1.33_W8465L6908_rate54.5_rieki6457900_買のみブレイクのみ_安定\\"
+    path = "E:\KabuRadar\\analys_PF1.33_W8465L6908_rate54.5_rieki6457900_買のみブレイクのみ_安定\\"
     dirname = path + targetfile
     df_csv = pd.read_csv(dirname, encoding="ms932", sep=",")    
 

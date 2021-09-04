@@ -39,6 +39,7 @@ def shuukei_makeExl():
     #選別　（お試し用）
     df_renew = pd.DataFrame()
     daytotal = 0
+    wktotal = 0
     predate = ""
     lst_data = []
 
@@ -48,7 +49,6 @@ def shuukei_makeExl():
     samelen = 0
     lst_tdyBuy = []     # 当日購入リスト
     lst_PreBuy = []     # 前営業日購入リスト
-    flg_newentry = True
     for row in range(len(df_con)):
         # 同一日付で処理済の行は読み飛ばす
         if samelen > 0:
@@ -57,24 +57,21 @@ def shuukei_makeExl():
         # 日付が一致するものを抽出
         df_samedate = (df_con[df_con["Index"].str.contains(date[:10])])
         df_samedate = df_samedate.sort_values("close", ascending=False)    # 高額順
-#        df_samedate = df_samedate.sort_values("close", ascending=True)      # 低額順
 
         # 同一日付内でループ
         for samerow in df_samedate.itertuples():
-#            print(samerow)
             if samerow.mark == "新買" or samerow.mark == "新売":
-                if flg_newentry == True:
-                    # 現在値を加算していく
-                    daytotal += samerow.close
+                # 現在値を加算していく
+                wktotal += samerow.close                # 一時トータルに終値加算
 
-                    # トータル10000(買値が100万円)以内なら購入対象として追加
-                    if daytotal < 10000:
-                        lst_tdyBuy.append(samerow.code)
-                        lst_data.append(samerow)
-                    else:
-                        flg_newentry = False
-
-            else:
+                # トータル10000(買値が100万円)以内なら購入対象として追加
+                if wktotal < 10000:                     # 一時トータルで比較
+                    lst_tdyBuy.append(samerow.code)     # 当日購入リストにコードを追加
+                    lst_data.append(samerow)            # データリストに追加
+                    daytotal += samerow.close           # 正式トータルに追加
+                
+                wktotal = daytotal  # 一時トータル更新
+        else:
                 # 前日リストの中にcodeがあるか検索（前日購入済みの株かどうか）
                 findcode = samerow.code in lst_PreBuy
                 # 見つけたら集計リストに追加
@@ -92,7 +89,7 @@ def shuukei_makeExl():
         lst_PreBuy = copy.copy(lst_tdyBuy)        
         lst_tdyBuy.clear()
         daytotal = 0
-        flg_newentry = True
+        wktotal = 0
         samelen = len(df_samedate) - 1
         nextpos = row + samelen + 1
         # 終了判定

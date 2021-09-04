@@ -184,8 +184,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
 
     # MACDとRSIを追加
     df_price = tc_macd.macd(df_price)
-#    df_price = tc_rsi.rsi(df_price)				// SBI證券アプリで見るRSIに近い計算方法
-    df_price = tc_rsi.rsi_tradingview(df_price)		// Tradingviewで見るRSIに近い計算方法
+#    df_price = tc_rsi.rsi(df_price)				# SBI證券アプリで見るRSIに近い計算方法
+    df_price = tc_rsi.rsi_tradingview(df_price)		# Tradingviewで見るRSIに近い計算方法
     df_price = tc_bb.Bollinger(df_price)
 
 #    print(df_price)
