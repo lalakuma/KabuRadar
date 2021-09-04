@@ -8,7 +8,6 @@ from pyquery import PyQuery
 import time
 import sqlight as db
 
-
 ####################################################################
 # 関数：株探サイトから銘柄情報を取得する
 ####################################################################
@@ -36,50 +35,53 @@ def get_brand(code):
 ####################################################################
 # 関数：メイン
 ####################################################################
-#--------------------------------------
-# エクセルから銘柄コードを読み込む
-#--------------------------------------
-df = pd.read_excel('../XLS/銘柄コード.xlsx',index_col=0)
-print(df)
+def entry_codelist():
+    #--------------------------------------
+    # エクセルから銘柄コードを読み込む
+    #--------------------------------------
+    df = pd.read_excel('../entry/XLS/銘柄コード.xlsx',index_col=0)
+    print(df)
 
-# DBに接続
-conn, cursor = db.connect_db()
-# コードリストテーブル作成（既にある場合は作成しない）
-db.create_codelisttbl(conn, cursor)  
-# コード設定テーブル作成（既にある場合は作成しない）
-db.create_codesettbl(conn, cursor)  
-#--------------------------------------
-# 銘柄情報を取得してデータベースに書き込む
-#--------------------------------------
-# エクセルから取得したコード分すべて回す
-for code, name in df.iterrows():
-    # コードリストテーブルに指定コードが既にDBに存在するかチェックする
-    exi = db.exist_data(cursor, 'tbl_codelist', 'code', str(code))
-    # 未登録の場合に処理を行う
-    if exi == False:
-        # 銘柄情報をスクレイピング
-        brand=get_brand(code)
-        # DBに1レコード追加
-        db.marge_codelist_1record(conn, cursor, "tbl_codelist", brand) 
+    # DBに接続
+    conn, cursor = db.connect_db()
+    # コードリストテーブル作成（既にある場合は作成しない）
+    db.create_codelisttbl(conn, cursor)  
+    # コード設定テーブル作成（既にある場合は作成しない）
+    db.create_codesettbl(conn, cursor)  
+    #--------------------------------------
+    # 銘柄情報を取得してデータベースに書き込む
+    #--------------------------------------
+    # エクセルから取得したコード分すべて回す
+    for code, name in df.iterrows():
+        # コードリストテーブルに指定コードが既にDBに存在するかチェックする
+        exi = db.exist_data(cursor, 'tbl_codelist', 'code', str(code))
+        # 未登録の場合に処理を行う
+        if exi == False:
+            # 銘柄情報をスクレイピング
+            brand=get_brand(code)
+            # DBに1レコード追加
+            db.marge_codelist_1record(conn, cursor, "tbl_codelist", brand) 
 
-    # コード設定テーブルに指定コードが既にDBに存在するかチェックする
-    exi = db.exist_data(cursor, 'tbl_code_set', 'Code', str(code))
-    # 未登録の場合に処理を行う
-    if exi == False:
-        # コードと有効設定を登録（登録時は無効。後で有益性をチェックしてから有効にする為）
-        df_ena = pd.DataFrame(columns=['Code', 'Enable'])
-        df_ena = df_ena.append({'Code': code, 'Enable': '1'}, ignore_index=True)
-        df_ena = df_ena.set_index('Code')
-        # DBに1レコード追加
-        db.add_settbl_record(conn, df_ena) 
+        # コード設定テーブルに指定コードが既にDBに存在するかチェックする
+        exi = db.exist_data(cursor, 'tbl_code_set', 'Code', str(code))
+        # 未登録の場合に処理を行う
+        if exi == False:
+            # コードと有効設定を登録（登録時は無効。後で有益性をチェックしてから有効にする為）
+            df_ena = pd.DataFrame(columns=['Code', 'Enable', 'PF'])
+            df_ena = df_ena.append({'Code': code, 'Enable': '1', 'PF': '0'}, ignore_index=True)
+            df_ena = df_ena.set_index('Code')
+            # DBに1レコード追加
+            db.add_settbl_record(conn, df_ena) 
 
-    # サーバに負荷をかけないように休止
-    #time.sleep(1)
+        # サーバに負荷をかけないように休止
+        #time.sleep(1)
 
-# DBクローズ
-db.close_db(conn)
+    # DBクローズ
+    db.close_db(conn)
 
     
-    
-
+#######################    
+#  実行
+#######################    
+entry_codelist()
 

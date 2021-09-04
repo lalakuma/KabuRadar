@@ -44,7 +44,7 @@ def create_codelisttbl(conn, cursor):
 #   (既に存在する場合は作成しない)
 ##########################################################################
 def create_codesettbl(conn, cursor):
-    sql = 'create table if not exists tbl_code_set(Code text PRIMARY KEY, Enable integer)'
+    sql = 'create table if not exists tbl_code_set(Code text PRIMARY KEY, PF real, Enable integer)'
     cursor.execute(sql)#executeコマンドでSQL文を実行
     
     conn.commit()
@@ -148,11 +148,12 @@ def add_settbl_record(conn, df):
     # code, Enable
     print(df)
     df.to_sql('tbl_code_set', conn, if_exists = 'append')
+
 ##########################################################################
-#   コード設定テーブルのEnable設定を更新
+#   コード設定テーブルのPF設定を更新
 ##########################################################################
-def update_codelist_enable(conn, cursor, tbl, df):
-    sql = 'UPDATE ' + tbl + ' SET Enable=' + df.Enable + ' WHERE code=' + str(df.code)
+def update_codeset(conn, cursor, tbl, df):
+    sql = 'UPDATE ' + tbl + ' SET PF=' + str(df.pf) + ', Enable=' + df.Enable + ' WHERE code=' + str(df.code)
     cursor.execute(sql)#executeコマンドでSQL文を実行
     conn.commit()#コミットする
 

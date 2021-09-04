@@ -27,8 +27,8 @@ conn, cursor = db.connect_db()
 codes = db.read_code_all(cursor, "tbl_codelist")
 
 #PAST_PERIOD=(-4600)     # (最古)過去4600日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
-PAST_PERIOD=(-2000)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
-#PAST_PERIOD=(-1000)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
+#PAST_PERIOD=(-2000)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
+PAST_PERIOD=(-160)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 cls_dt = bktst.KabInf(sell_period = 0,
                         rsi_max=100, 
                         rsi_period = 14,
@@ -68,15 +68,6 @@ for code in codes:
     if testmode == 1:
         ### 単発テスト用 ↓↓↓↓ STA ################################################
         code = 4523
-#        cls_dt = bktst.KabInf(sell_period = 1, rsi_max=100, breakout=5, macd_offset=5, lineave=200, past_period=(-3000), rsi_per=30)
-        # cls_dt = bktst.KabInf(sell_period = 0,
-        #                         rsi_max=100, 
-        #                         rsi_period = 14,
-        #                         breakout=5, 
-        #                         macd_offset=5, 
-        #                         lineave=100, 
-        #                         past_period=PAST_PERIOD, 
-        #                         rsi_per=30)
         # result = bktst.backtst_proc(code,
         #                         cls_dt, 
         #                         sb_mode = DEF.MODE_BOTH, 
@@ -99,7 +90,7 @@ for code in codes:
                                 df_indicator,
                                 cls_dt, 
                                 req_sb_mode = DEF.MODE_BUY, 
-                                jdg_candle = False,          # ローソク足判定
+                                jdg_candle = True,          # ローソク足判定
                                 jdg_ind=False,               # 指標銘柄判定
                                 jdg_mov=False,              # 移動平均線判定
                                 jdg_rsi=False,              # RSI判定

@@ -5,11 +5,11 @@ import os
 import glob
 import openpyxl as px
 import copy
+import getConfig
 
 def shuukei_makeExl():
     fileShukei = "集計.xlsx"
-#    path = "C:\\MorinoFolder\\Python\\KabuRadar\\analys\\"
-    path = "E:\\KabuRadar\\analys\\"
+    path = getConfig.get_shuukei_path()
 
     # フォルダ内の全ファイルを取得
     allFiles = glob.glob(path + "\*.csv") # 指定したフォルダーの全エクセルファイルを変数に代入します
@@ -26,6 +26,11 @@ def shuukei_makeExl():
         code = file_[poscode+4:poscode+8]
         df["code"] = code
         list_.append(df)
+    
+    if len(list_) == 0:
+        print("集計対象ファイルが見つかりません")
+        return
+
     # 結合
     df_con = pd.concat(list_, join='inner') # joinをinnerに指定
     # NaNのある行を削除
@@ -66,12 +71,13 @@ def shuukei_makeExl():
 
                 # トータル10000(買値が100万円)以内なら購入対象として追加
                 if wktotal < 10000:                     # 一時トータルで比較
+#                if wktotal < 5000:                     # 一時トータルで比較
                     lst_tdyBuy.append(samerow.code)     # 当日購入リストにコードを追加
                     lst_data.append(samerow)            # データリストに追加
                     daytotal += samerow.close           # 正式トータルに追加
                 
                 wktotal = daytotal  # 一時トータル更新
-        else:
+            else:
                 # 前日リストの中にcodeがあるか検索（前日購入済みの株かどうか）
                 findcode = samerow.code in lst_PreBuy
                 # 見つけたら集計リストに追加
@@ -107,14 +113,31 @@ def shuukei_makeExl():
         dfreal.to_excel(writer, sheet_name='1日10000以下', index=False)
 
     # エクセルファイルの先頭行にフィルターをつける
-    wb= px.load_workbook(path + fileShukei)
-    ws = wb.active
-    ws.column_dimensions['B'].width =22
-    ws.auto_filter.ref = ws.dimensions
-    ws1 = wb.worksheets[1]
-    ws1.column_dimensions['B'].width =22
-    ws1.auto_filter.ref = ws.dimensions
-    wb.save(path + fileShukei)
+    if(len(df_con) > 0):
+        wb= px.load_workbook(path + fileShukei)
+        ws = wb.active
+        ws.column_dimensions['B'].width =22
+        ws.auto_filter.ref = ws.dimensions
+        ws['B1'] = 'date'
+        for row, cellObj in enumerate(list(ws.columns)[9]): # セル(J列)に累積計算関数を書き込む
+            if row == 0:
+                continue
+            n = '=IF(ISNUMBER(J' + str(row) + '),J' + str(row) + '+H' + str(row+1) + '+I' + str(row+1) + ',0)'
+            cellObj.value = n
+
+    if(len(dfreal) > 0):
+        ws1 = wb.worksheets[1]
+        ws1.column_dimensions['B'].width =22
+        ws1.auto_filter.ref = ws1.dimensions
+        ws1['B1'] = 'date'
+        for row, cellObj in enumerate(list(ws1.columns)[9]): # セル(J列)に累積計算関数を書き込む
+            if row == 0:
+                continue
+            n = '=IF(ISNUMBER(J' + str(row) + '),J' + str(row) + '+H' + str(row+1) + '+I' + str(row+1) + ',0)'
+            cellObj.value = n
+
+    if(len(df_con) > 0):
+        wb.save(path + fileShukei)
 
 
 def shuukei_toCsv():
@@ -173,4 +196,4 @@ def shuukei_toCsv():
         df.to_csv(strpath, encoding="shift_jis")    
     
 #shuukei_toCsv()
-#shuukei_makeExl()
+shuukei_makeExl()
