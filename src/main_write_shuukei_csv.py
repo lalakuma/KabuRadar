@@ -70,7 +70,6 @@ def shuukei_makeExl():
         # 日付が一致するものを抽出
         df_samedate = (df_con[df_con["Index"].str.contains(date[:10])])
         df_samedate = df_samedate.sort_values("PF", ascending=False)    # 高PF順
-        print(df_samedate)
 
         # 同一日付内でループ
         for samerow in df_samedate.itertuples():

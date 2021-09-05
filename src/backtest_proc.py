@@ -294,8 +294,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
                     sb_mode = DEF.MODE_BUY
 
     
-        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-09-03'):
-            print(bkdf)
+#        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-09-03'):
+#            print(bkdf)
         #==============================================================================================
         # 売却処理
         #==============================================================================================
