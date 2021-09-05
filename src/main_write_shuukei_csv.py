@@ -6,8 +6,17 @@ import glob
 import openpyxl as px
 import copy
 import getConfig
+import sqlight as db
+from openpyxl.styles import Font, PatternFill
+from openpyxl.formatting.rule import CellIsRule, FormulaRule
 
 def shuukei_makeExl():
+    # DBに接続
+    conn, cursor = db.connect_db()
+    df_set = db.read_rec_all(conn, cursor, "tbl_code_set")
+    # DBクローズ
+    db.close_db(conn)
+
     fileShukei = "集計.xlsx"
     path = getConfig.get_shuukei_path()
 
@@ -39,18 +48,17 @@ def shuukei_makeExl():
 
     # 並べ替え
     df_con = df_con.reset_index()
-#    df_con = df_con.set_index("Index").loc[:,["code","close","mark","buy","sell","buygain","sellgain","income"]]
-    df_con = df_con.loc[:,["Index","code","close","mark","buy","sell","buygain","sellgain","income"]]
+    df_con = pd.merge(df_con, df_set, on='code')            # tbl_code_setとマージ
+    df_con = df_con.sort_values("Index", ascending=True)    # 日付順にソート
+    df_con = df_con.loc[:,["Index","code","close","PF","mark","buygain","sellgain","income"]]
+    df_con = df_con.reset_index(drop=True)
     #選別　（お試し用）
-    df_renew = pd.DataFrame()
     daytotal = 0
     wktotal = 0
-    predate = ""
     lst_data = []
 
 
     date = df_con.iat[0,0]
-    cnt = 0
     samelen = 0
     lst_tdyBuy = []     # 当日購入リスト
     lst_PreBuy = []     # 前営業日購入リスト
@@ -61,33 +69,43 @@ def shuukei_makeExl():
             continue
         # 日付が一致するものを抽出
         df_samedate = (df_con[df_con["Index"].str.contains(date[:10])])
-        df_samedate = df_samedate.sort_values("close", ascending=False)    # 高額順
+        df_samedate = df_samedate.sort_values("PF", ascending=False)    # 高PF順
+        print(df_samedate)
 
         # 同一日付内でループ
         for samerow in df_samedate.itertuples():
-            if samerow.mark == "新買" or samerow.mark == "新売":
+            # 条件によってmarkを変更したいのでタプルではなく辞書に変換
+            dic_row = samerow._asdict()
+            #--------------------#
+            # エントリー側の判定
+            #--------------------#
+            if dic_row["mark"] == "新買" or dic_row["mark"] == "新売":
                 # 現在値を加算していく
-                wktotal += samerow.close                # 一時トータルに終値加算
+                wktotal += dic_row["close"]                # 一時トータルに終値加算
 
                 # トータル10000(買値が100万円)以内なら購入対象として追加
-                if wktotal < 10000:                     # 一時トータルで比較
+                if wktotal < 5000:                     # 一時トータルで比較
 #                if wktotal < 5000:                     # 一時トータルで比較
-                    lst_tdyBuy.append(samerow.code)     # 当日購入リストにコードを追加
-                    lst_data.append(samerow)            # データリストに追加
-                    daytotal += samerow.close           # 正式トータルに追加
-                
+                    lst_tdyBuy.append(dic_row["code"])  # 当日購入リストにコードを追加
+                    lst_data.append(dic_row)            # データリストに追加
+                    daytotal += dic_row["close"]        # 正式トータルに追加                
                 wktotal = daytotal  # 一時トータル更新
-            else:
-                # 前日リストの中にcodeがあるか検索（前日購入済みの株かどうか）
-                findcode = samerow.code in lst_PreBuy
-                # 見つけたら集計リストに追加
-                if findcode == True:
-                    # 前日リストの中にcodeがあるか検索（前日購入済みの株かどうか）
-                    tdyfindcode = samerow.code in lst_tdyBuy
-                    # 既に購入リスト側に追加されている場合は重複になってしまうので追加しない
-                    if tdyfindcode == False:
-                        lst_data.append(samerow)
 
+            #--------------------#
+            # 決済側の判定
+            #--------------------#
+            # 前日リストの中にcodeがあるか検索（前日購入済みの株かどうか）
+            findcode = dic_row["code"] in lst_PreBuy
+            # 見つけたら集計リストに追加
+            if findcode == True:
+                # 当日購入リストにあるか判定
+                tdyfindcode = dic_row["code"] in lst_tdyBuy
+                # 既に購入リスト側に追加されている場合は重複になってしまうので追加しない
+                if tdyfindcode == False:
+                    lst_data.append(dic_row)
+                    dic_row['mark'] = "決済"       # 購入はないので決済のみに書き換え
+                else:
+                    dic_row['mark'] = "決済+" + dic_row['mark']
         #----------------------------------
         # 次の日付グループに向けての準備
         #----------------------------------
@@ -117,24 +135,34 @@ def shuukei_makeExl():
         wb= px.load_workbook(path + fileShukei)
         ws = wb.active
         ws.column_dimensions['B'].width =22
+        ws.column_dimensions['F'].width =10
         ws.auto_filter.ref = ws.dimensions
         ws['B1'] = 'date'
-        for row, cellObj in enumerate(list(ws.columns)[9]): # セル(J列)に累積計算関数を書き込む
+        for row, cellObj in enumerate(list(ws.columns)[8]): # セル(K列)に累積計算関数を書き込む
             if row == 0:
                 continue
-            n = '=IF(ISNUMBER(J' + str(row) + '),J' + str(row) + '+H' + str(row+1) + '+I' + str(row+1) + ',0)'
+            n = '=IF(ISNUMBER(I' + str(row) + '),I' + str(row) + '+G' + str(row+1) + '+H' + str(row+1) + ',0)'
             cellObj.value = n
 
     if(len(dfreal) > 0):
         ws1 = wb.worksheets[1]
         ws1.column_dimensions['B'].width =22
+        ws1.column_dimensions['F'].width =10
         ws1.auto_filter.ref = ws1.dimensions
         ws1['B1'] = 'date'
-        for row, cellObj in enumerate(list(ws1.columns)[9]): # セル(J列)に累積計算関数を書き込む
+        for row, cellObj in enumerate(list(ws1.columns)[8]): # セル(K列)に累積計算関数を書き込む
             if row == 0:
                 continue
-            n = '=IF(ISNUMBER(J' + str(row) + '),J' + str(row) + '+H' + str(row+1) + '+I' + str(row+1) + ',0)'
+            n = '=IF(ISNUMBER(I' + str(row) + '),I' + str(row) + '+G' + str(row+1) + '+H' + str(row+1) + ',0)'
             cellObj.value = n
+
+        # セルの色を設定
+        fmtarea = 'F2:F' + str(row + 1)
+        gray_fill = PatternFill(bgColor='FF99FF', fill_type='solid')
+        formula_rule1 = FormulaRule(formula=['$F2="新買"'], fill=gray_fill)
+        formula_rule2 = FormulaRule(formula=['$F2="決済+新買"'], fill=gray_fill)
+        ws1.conditional_formatting.add(fmtarea, formula_rule1)
+        ws1.conditional_formatting.add(fmtarea, formula_rule2)
 
     if(len(df_con) > 0):
         wb.save(path + fileShukei)

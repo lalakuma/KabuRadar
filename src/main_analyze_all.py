@@ -8,7 +8,7 @@ from datetime import datetime, date, timedelta
 # 結果をCSVファイルに書き込む
 ############################################
 def write_csv(dt):
-    if dt.win == 0 and dt.lose == 0:
+    if dt.entrycnt == 0:
         print(str(code) + " is none")
     else:
         winrate = bktst.KabInf.get_winrate(dt)
@@ -48,7 +48,7 @@ df_nikkei = pkabu.getPeriodKabuData(code, PAST_PERIOD, conn, cursor)
 
 # 設定テーブル 全データ取得
 df_set = db.read_rec_all(conn, cursor, "tbl_code_set")
-df_set = df_set.set_index('Code')
+df_set = df_set.set_index('code')
 
 # 銘柄コードリストに登録されている全コードに対して処理を行う
 for code in codes:
@@ -96,7 +96,7 @@ for code in codes:
                                 jdg_rsi=False,              # RSI判定
                                 jdg_macd=False,             # MACD判定
                                 jdg_brk=True,               # ブレイク判定
-                                jdg_berd=False)              # 髭判定
+                                jdg_berd=True)              # 髭判定
         if result == -1:
             continue
    

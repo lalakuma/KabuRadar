@@ -26,6 +26,7 @@ class KabInf:
     plusgain = 0            # 売却時の株価1000だとした場合のプラス利益金額(全コードPF計算用)
     minusgain = 0           # 売却時の株価1000だとした場合の損失金額(全コードPF計算用)
     pf = 0                  # プロフィットファクター
+    entrycnt = 0            # 購入カウント
 
     #****************************
     # 初期処理
@@ -131,6 +132,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
     ind_presma75 = 0
     ind_preclose = 0
     i_presma25 = 0
+    entrycnt = 0
+
     sb_mode = DEF.MODE_BUY  # 初期値は買い
     
     if req_sb_mode != DEF.MODE_BOTH:
@@ -291,8 +294,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
                     sb_mode = DEF.MODE_BUY
 
     
-#        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-07-20'):
-#            print(bkdf)
+        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-09-03'):
+            print(bkdf)
         #==============================================================================================
         # 売却処理
         #==============================================================================================
@@ -519,6 +522,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         # 買いモードの時
         if sb_mode == DEF.MODE_BUY:
             buy_pos += 1
+            entrycnt +=1
             bkdf["buy"].iloc[-1] = buy_pos
             if buy_price == 0:
                 pre_low = i_low
@@ -539,6 +543,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         # 売りモードの時
         else:
             sell_pos += 1
+            entrycnt +=1
             bkdf["sell"].iloc[-1] = sell_pos
             if sell_price == 0:
                 pre_high = i_high
@@ -565,6 +570,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
     Prm.win = win
     Prm.lose = lose
     Prm.income = income
+    Prm.entrycnt = entrycnt
     Prm.plusgain = int(round(plusgain, 1) * 100)     # 売却時の株価1000だとした場合のプラス利益金額を計算
     Prm.minusgain = int(round(minusgain, 1) * 100)   # 売却時の株価1000だとした場合の損失金額を計算
     if win != 0 or lose !=0:
