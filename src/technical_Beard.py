@@ -28,13 +28,13 @@ def jdg_beard(sb_mode, i_open, i_high, i_low, i_close):
             # 髭の長さを取得    
             line_upper = i_high - i_close          # 高値と現在値の差分を上髭に設定
             # 髭の条件をセット(とりあえず価格の1.5%とする)
-            limit_beard = i_close * 0.015
+            limit_beard = i_close * 0.04
        # 陰線の時
         else:
             # 髭の長さを取得    
             line_upper = i_high - i_open           # 高値と始値の差分を上髭に設定
             # 髭の条件をセット(とりあえず価格の1.5%とする)
-            limit_beard = i_open * 0.015
+            limit_beard = i_open * 0.04
         
         # 髭の方が長かったら売買なしとする
         if line_upper > limit_beard:

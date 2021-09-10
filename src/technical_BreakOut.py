@@ -6,12 +6,13 @@ import common_def as DEF
 # 引数：mode        (MODE_BUY=買い判定、MODE_SELL=売り判定)
 #     : dfrsi       データフレーム
 #     : period      期間
+#     : offset      オフセット
 #     : close       終値(現在価格)
 # 戻り値：0=売買シグナルなし, 1=売買シグナルあり
 #################################################################
-def jdg_break_out(sb_mode, df, period, close):
+def jdg_break_out(sb_mode, df, period, offset, close):
     sigsw_break = 0
-    offset = close * 0.01
+    breakoffset = close * offset
 
     # 最後から指定期間分のレコードを取得
     breakdf = df.tail(period)
@@ -27,7 +28,7 @@ def jdg_break_out(sb_mode, df, period, close):
         df_max = breakdf.rolling(window=size-1).max()
         max = df_max["high"].values[-1]
         # 現在の価格が前日までの指定期間の高値を超えている場合に買いシグナルON
-        if close > max + offset:
+        if close > max + breakoffset:
             sigsw_break = 1
     # 売りシグナル判定
     elif sb_mode == DEF.MODE_SELL:
@@ -35,7 +36,7 @@ def jdg_break_out(sb_mode, df, period, close):
         df_min = breakdf.rolling(window=size-1).min()
         min = df_min["low"].values[-1]
         # 現在の価格が前日までの指定期間の高値を超えている場合に買いシグナルON
-        if close < min - offset:
+        if close < min - breakoffset:
             sigsw_break = 1
 
     return sigsw_break

@@ -31,16 +31,17 @@ class KabInf:
     #****************************
     # 初期処理
     #****************************
-    def __init__(self, lineave=200, macd_offset=0, rsi_border=30, rsi_per=25, rsi_max=59, rsi_period=10, breakout=5, sell_period=3, past_period=(-1200)):
-        self.lineave = lineave              # 買いシグナルに使用する長期移動平均線(上昇時に買)
-        self.macd_offset = macd_offset      # MACDとシグナルの開き
-        self.rsi_border = rsi_border        # RSIの下限値。scr_rsi_perが無効（-1）の時に採用する。
-        self.rsi_per = rsi_per              # RSIの下限を全体の%で決める時の値。-1の時はrsi_borderを使用。
-        self.rsi_max = rsi_max              # 買シグナルを出す上限RSI
-        self.rsi_period = rsi_period        # RSIの値を何日まで遡ってみるか
-        self.breakout = breakout            # ブレイクアウト判定期間に使用する値
-        self.sell_period = sell_period      # 買いポジション最大保持期間
-        self.past_period = past_period        # 過去何日前までのチャートを使用するか
+    def __init__(self, lineave=200, break_offset=0, macd_offset=0, rsi_border=30, rsi_per=25, rsi_max=59, rsi_period=10, breakout=5, sell_period=3, past_period=(-1200)):
+        self.lineave = lineave                  # 買いシグナルに使用する長期移動平均線(上昇時に買)
+        self.macd_offset = macd_offset          # MACDとシグナルの開き
+        self.break_offset = break_offset * 0.01 # ブレイクアウトオフセット。上限を何%超えたか。(1/100で計算)
+        self.rsi_border = rsi_border            # RSIの下限値。scr_rsi_perが無効（-1）の時に採用する。
+        self.rsi_per = rsi_per                  # RSIの下限を全体の%で決める時の値。-1の時はrsi_borderを使用。
+        self.rsi_max = rsi_max                  # 買シグナルを出す上限RSI
+        self.rsi_period = rsi_period            # RSIの値を何日まで遡ってみるか
+        self.breakout = breakout                # ブレイクアウト判定期間に使用する値
+        self.sell_period = sell_period          # 買いポジション最大保持期間
+        self.past_period = past_period          # 過去何日前までのチャートを使用するか
     #****************************
     # 勝率を取得する
     #****************************
@@ -56,7 +57,7 @@ class KabInf:
     #***************************************
     # 解析に使用したパラメータをCSVに保存する
     #***************************************
-    def write_prm_tocsv(self):
+    def write_prm_tocsv(self, inprm):
 
         tup_prm = { 'lineave' : (self.lineave),
                     'macd_offset' : (self.macd_offset),
@@ -71,13 +72,11 @@ class KabInf:
         strdt = datetime.strftime(datetime.now(), '%Y-%m-%d_%H%M%S')
         df_prm = pd.DataFrame(tup_prm,index=[datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S')])
         print(df_prm)
-        print("../analys/設定_" + strdt + ".csv")
-
-        analys_path = "../analys"#フォルダ名
+        analys_path = "../analys/" + str(inprm) + "/" #フォルダ名
         if not os.path.exists(analys_path):#ディレクトリがなかったら
             os.mkdir(analys_path)#作成したいフォルダ名を作成
 
-        df_prm.to_csv("../analys/設定_" + strdt + ".csv", encoding="shift_jis")    
+        df_prm.to_csv(analys_path + "設定_" + strdt + ".csv", encoding="shift_jis")    
 
         
 #***************************************
@@ -158,8 +157,9 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         df['close'] = df['close'].astype('int64')
         df['volume'] = df['volume'].astype('int64')
         df['SMA5'] = df['close'].rolling(window=5).mean()               # 5日移動平均を追加
-        df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
-        df['SMASET'] = df['close'].rolling(window=Prm.lineave).mean()   # 設定した移動平均を追加
+        if jdg_mov == True:    
+            df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
+            df['SMASET'] = df['close'].rolling(window=Prm.lineave).mean()   # 設定した移動平均を追加
     except:
         print(code + ": Error")
         return (-1)
@@ -172,7 +172,10 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         return (-1)
 
     #日付をインデックスにして、必要なアイテム順に並び替え
-    df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA25","SMASET"]]
+    if jdg_mov == True:
+        df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA25","SMASET"]]
+    else:
+        df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5"]]
     df_price["mark"] = ""
     df_price["buy"] = 0
     df_price["buygain"] = 0
@@ -183,20 +186,22 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
     # 指標銘柄も日付をインデックスにする
     #df_indicator= df_indicator.set_index("datetime").loc[:,["close","SMA5","SMA25","SMA75"]]
 
-    print("sell_period :", Prm.sell_period)
+    # MACD追加
+    if jdg_macd == True:
+        df_price = tc_macd.macd(df_price)
+        
+    # RSI追加
+    if jdg_rsi == True:
+        df_price = tc_rsi.rsi_tradingview(df_price)		# Tradingviewで見るRSIに近い計算方法
+    #    df_price = tc_rsi.rsi(df_price)				# SBI證券アプリで見るRSIに近い計算方法
+        if Prm.rsi_per != -1:
+            Prm.adopt_rsi = tc_rsi.search_proper_rsi(df_price, Prm.rsi_per)
+        else:
+            Prm.adopt_rsi = Prm.rsi_border
 
-    # MACDとRSIを追加
-    df_price = tc_macd.macd(df_price)
-#    df_price = tc_rsi.rsi(df_price)				# SBI證券アプリで見るRSIに近い計算方法
-    df_price = tc_rsi.rsi_tradingview(df_price)		# Tradingviewで見るRSIに近い計算方法
-    df_price = tc_bb.Bollinger(df_price)
-
-#    print(df_price)
-
-    if Prm.rsi_per != -1:
-        Prm.adopt_rsi = tc_rsi.search_proper_rsi(df_price, Prm.rsi_per)
-    else:
-        Prm.adopt_rsi = Prm.rsi_border
+    # ボリンジャーバンド追加
+    if jdg_bolin == True:
+        df_price = tc_bb.Bollinger(df_price)
 
     bkdf = pd.DataFrame()
     for row in df_price.itertuples():
@@ -204,8 +209,12 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         # 移動平均が算出可能な日付付近までスキップ
         wkdf= pd.DataFrame([row])
         bkdf = bkdf.append(wkdf,ignore_index=True)
-        if numpy.isnan(wkdf["SMASET"].values) == True:
-            continue
+        if jdg_mov == True:
+            if numpy.isnan(wkdf["SMASET"].values) == True:
+                continue
+        else:
+            if numpy.isnan(wkdf["SMA5"].values) == True:
+                continue
 
         #----------------------
         # 日付取得
@@ -215,8 +224,9 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         #----------------------
         # 最新のMACDとシグナルの値を取得
         #----------------------
-        macd = bkdf["MACD"].values[-1]
-        sig = bkdf["Signal"].values[-1]
+        if jdg_macd == True:
+            macd = bkdf["MACD"].values[-1]
+            sig = bkdf["Signal"].values[-1]
             
         #----------------------
         # 各時点の値を取得
@@ -225,8 +235,9 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         i_close = row.close                         # 終値取得
         i_low = row.low                             # 安値取得
         i_high = row.high                           # 高値取得
-        i_sma5 = row.SMA5                           # 5日移動平均値取得
-        i_sma25 = row.SMA25                         # 25日移動平均値取得
+        if jdg_mov == True:
+            i_sma5 = row.SMA5                           # 5日移動平均値取得
+            i_sma25 = row.SMA25                     # 25日移動平均値取得
 
 
         #----------------------
@@ -506,8 +517,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         # ブレイクアウト判定
         #----------------------
         if jdg_brk == True:
-            dfrsi = bkdf.rename(columns={'Index': 'datetime'})
-            if tc_break.jdg_break_out(sb_mode, dfrsi, Prm.breakout, i_close) == 0:
+            dfbreak = bkdf.rename(columns={'Index': 'datetime'})
+            if tc_break.jdg_break_out(sb_mode, dfbreak, Prm.breakout, Prm.break_offset, i_close) == 0:
                 continue
         #----------------------
         # 髭判定

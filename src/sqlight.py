@@ -209,7 +209,8 @@ def add_records(conn, code, lst_price):
 def one_marge_df_records(conn, cursor, code, df):
 
     idx = df.index[-1]
-    str_date = str(idx.date())
+#    str_date = str(idx.date())
+    str_date = str(idx)
 
     # 同一日付のレコードをデータベースから削除
     del_price_one_rec(conn, cursor, code, str_date)

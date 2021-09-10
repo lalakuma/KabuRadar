@@ -34,8 +34,8 @@ def get_pricedata(code, ptype, peri, freq):
         # 日本時間へ変換
         df["datetime"] = df["datetime"] + datetime.timedelta(hours=9)
         # データ型を設定　(数値はNaNが含まれるとintegerにできないので浮動小数点型にする)
-        df['datetime'] = df['datetime'].astype('datetime64')
-
+#        df['datetime'] = df['datetime'].astype('datetime64')
+        df['datetime'] = pd.DatetimeIndex(df["datetime"]).date
         #日付をインデックスにして、必要なアイテム順に並び替え
         df_daily = df.set_index("datetime").loc[:,["open","high","low","close","volume"]]
     else:

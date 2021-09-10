@@ -4,7 +4,7 @@ import technical_MACD as tc_macd
 import technical_RSI as tc_rsi
 
 ############################################
-# の株データを指定期間分取得する
+# 指標銘柄の株データを指定期間分取得する
 ############################################
 # 日経平均株価()の取得
 def getPeriodKabuData(code, past_period, conn, cursor):
@@ -16,6 +16,7 @@ def getPeriodKabuData(code, past_period, conn, cursor):
 
     # 指定期間のデータをDBから読み出す
     df = db.read_rec_period(conn, cursor, str(code), str_date_sta, str_date_end)
+    print(df)
     #df.columns = ["datetime","open","high","low","close","volume"]
     try:
         df['datetime'] = df['datetime'].astype('datetime64')

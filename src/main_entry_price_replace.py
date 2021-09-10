@@ -6,6 +6,7 @@ from numpy import add, true_divide
 import sqlight as db
 import get_yahoo_api as yahoo
 from enum import Enum
+from datetime import datetime, date, timedelta
 
 # DBに接続
 conn, cursor = db.connect_db()
@@ -28,7 +29,7 @@ for code in codes:
         df_daily = yahoo.get_pricedata(code, ptype, period, frequency)
         print(df_daily)
         idx = df_daily.index[0]
-        str_date = str(idx.date())
+        str_date = str(idx)
 
         # 指定日以降のレコードを削除
         db.del_price_after_date(conn, cursor, code, str_date)

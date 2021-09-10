@@ -10,7 +10,7 @@ import sqlight as db
 from openpyxl.styles import Font, PatternFill
 from openpyxl.formatting.rule import CellIsRule, FormulaRule
 
-def shuukei_makeExl():
+def shuukei_makeExl(prm):
     # DBに接続
     conn, cursor = db.connect_db()
     df_set = db.read_rec_all(conn, cursor, "tbl_code_set")
@@ -21,7 +21,7 @@ def shuukei_makeExl():
     path = getConfig.get_shuukei_path()
 
     # フォルダ内の全ファイルを取得
-    allFiles = glob.glob(path + "\*.csv") # 指定したフォルダーの全エクセルファイルを変数に代入します
+    allFiles = glob.glob(path + str(prm) + "\*.csv") # 指定したフォルダーの全エクセルファイルを変数に代入します
     df = pd.DataFrame()
     list_ = []
     # フォルダ内のファイルを全て処理する
@@ -39,12 +39,13 @@ def shuukei_makeExl():
     if len(list_) == 0:
         print("集計対象ファイルが見つかりません")
         return
-
     # 結合
     df_con = pd.concat(list_, join='inner') # joinをinnerに指定
+    print(df_con) #debug
     # NaNのある行を削除
     df_con = df_con.dropna(axis = 0, how = 'any')
     df_con = df_con.sort_values(['Index', 'code'])
+    print(df_con) #debug
 
     # 並べ替え
     df_con = df_con.reset_index()
@@ -57,6 +58,9 @@ def shuukei_makeExl():
     wktotal = 0
     lst_data = []
 
+    if len(df_con) == 0:
+        print("No data")
+        return
 
     date = df_con.iat[0,0]
     samelen = 0
@@ -83,7 +87,7 @@ def shuukei_makeExl():
                 wktotal += dic_row["close"]                # 一時トータルに終値加算
 
                 # トータル10000(買値が100万円)以内なら購入対象として追加
-                if wktotal < 5000:                     # 一時トータルで比較
+                if wktotal < 10000:                     # 一時トータルで比較
 #                if wktotal < 5000:                     # 一時トータルで比較
                     lst_tdyBuy.append(dic_row["code"])  # 当日購入リストにコードを追加
                     lst_data.append(dic_row)            # データリストに追加
@@ -123,15 +127,15 @@ def shuukei_makeExl():
             break
 
     # エクセルに書き込み
-    df_con.to_excel(path + fileShukei, sheet_name='全コード結合', encoding="shift_jis")
+    df_con.to_excel(path + str(prm) + "/" + fileShukei, sheet_name='全コード結合', encoding="shift_jis")
 
     dfreal = pd.DataFrame(lst_data)    
-    with pd.ExcelWriter(path + fileShukei, engine="openpyxl", mode="a") as writer:
+    with pd.ExcelWriter(path + str(prm) + "/" + fileShukei, engine="openpyxl", mode="a") as writer:
         dfreal.to_excel(writer, sheet_name='1日10000以下', index=False)
 
     # エクセルファイルの先頭行にフィルターをつける
     if(len(df_con) > 0):
-        wb= px.load_workbook(path + fileShukei)
+        wb= px.load_workbook(path + str(prm) + "/" + fileShukei)
         ws = wb.active
         ws.column_dimensions['B'].width =22
         ws.column_dimensions['F'].width =10
@@ -164,11 +168,11 @@ def shuukei_makeExl():
         ws1.conditional_formatting.add(fmtarea, formula_rule2)
 
     if(len(df_con) > 0):
-        wb.save(path + fileShukei)
+        wb.save(path + str(prm) + "/" + fileShukei)
 
 
-def shuukei_toCsv():
-    filelst = os.listdir(path='../analys')
+def shuukei_toCsv(prm):
+    filelst = os.listdir(path='../analys/' + str(prm) + "/")
 
     df = pd.DataFrame()
 
@@ -216,11 +220,13 @@ def shuukei_toCsv():
         print(strWinPer)
         strincome = "rieki" + '{:}'.format(int(df['incomes'].sum()))
         print(strincome)
-        strpfall = "PF" + str(round(total_pgain / total_mgain, 2))
-
+        if total_mgain != 0:
+            strpfall = "PF" + str(round(total_pgain / total_mgain, 2))
+        else:
+            strpfall = "PF" + str(round(total_pgain))
         #wlstr = "_prm" + strprm + "_rsi"+ str(dt.adopt_rsi) + "_W" + str(dt.win) + "L" + str(dt.lose) + "_" + str(dt.winrate) + "%_" + str(dt.income)
-        strpath = "../analys/" + strpfall + "_" + "W" + str(cnt_win) + "L" + str(cnt_lose) + "_" + strWinPer + "_" + strincome + ".csv"
+        strpath = "../analys/" + str(prm) + "/" + strpfall + "_" + "W" + str(cnt_win) + "L" + str(cnt_lose) + "_" + strWinPer + "_" + strincome + ".csv"
         df.to_csv(strpath, encoding="shift_jis")    
     
-#shuukei_toCsv()
-shuukei_makeExl()
+#shuukei_toCsv(0)
+shuukei_makeExl(0)
