@@ -10,20 +10,30 @@ import sqlight as db
 from openpyxl.styles import Font, PatternFill
 from openpyxl.formatting.rule import CellIsRule, FormulaRule
 
-def shuukei_makeExl(prm):
+#################################################################
+# トレード銘柄決定処理
+# 引数：mode        (MODE_BUY=買い、MODE_SELL=売り)
+#     : dfrsi       データフレーム
+#     : period      期間
+# 戻り値：True=買いの時に2σを超えている/売りの時に-2σを超えている
+#       ：False=買いの時に2σを超えていない/売りの時に-2σを超えていない
+#################################################################
+def decide_trade(DirPath):
     # DBに接続
     conn, cursor = db.connect_db()
     df_set = db.read_rec_all(conn, cursor, "tbl_code_set")
     # DBクローズ
     db.close_db(conn)
 
-    fileShukei = "集計.xlsx"
-    path = getConfig.get_shuukei_path()
-
     # フォルダ内の全ファイルを取得
-    allFiles = glob.glob(path + str(prm) + "\*.csv") # 指定したフォルダーの全エクセルファイルを変数に代入します
+    allFiles = glob.glob(DirPath + "\*.csv") # 指定したフォルダーの全エクセルファイルを変数に代入します
     df = pd.DataFrame()
     list_ = []
+
+    # 結果ファイルがなければ終了
+    if len(allFiles) == 0:
+        return df, list_
+
     # フォルダ内のファイルを全て処理する
     for file_ in allFiles:
         df = pd.read_csv(file_, encoding="ms932", sep=",")    
@@ -41,11 +51,9 @@ def shuukei_makeExl(prm):
         return
     # 結合
     df_con = pd.concat(list_, join='inner') # joinをinnerに指定
-    print(df_con) #debug
     # NaNのある行を削除
     df_con = df_con.dropna(axis = 0, how = 'any')
     df_con = df_con.sort_values(['Index', 'code'])
-    print(df_con) #debug
 
     # 並べ替え
     df_con = df_con.reset_index()
@@ -125,6 +133,17 @@ def shuukei_makeExl(prm):
             date = df_con.iat[nextpos, 0]
         else:
             break
+    return df_con, lst_data
+    
+
+def shuukei_makeExl(prm):
+    fileShukei = "集計.xlsx"
+    path = getConfig.get_shuukei_path()
+    # トレード決定処理
+    df_con, lst_data = decide_trade(path + str(prm))
+    if len(lst_data) == 0:
+        print("集計対象ファイルがありません。")
+        return
 
     # エクセルに書き込み
     df_con.to_excel(path + str(prm) + "/" + fileShukei, sheet_name='全コード結合', encoding="shift_jis")
@@ -221,7 +240,7 @@ def shuukei_toCsv(prm):
         strincome = "rieki" + '{:}'.format(int(df['incomes'].sum()))
         print(strincome)
         if total_mgain != 0:
-            strpfall = "PF" + str(round(total_pgain / total_mgain, 2))
+            strpfall = "PF" + str(round(total_pgain / total_mgain, 3))
         else:
             strpfall = "PF" + str(round(total_pgain))
         #wlstr = "_prm" + strprm + "_rsi"+ str(dt.adopt_rsi) + "_W" + str(dt.win) + "L" + str(dt.lose) + "_" + str(dt.winrate) + "%_" + str(dt.income)

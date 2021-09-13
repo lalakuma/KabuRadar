@@ -39,7 +39,7 @@ def entry_codelist():
     #--------------------------------------
     # エクセルから銘柄コードを読み込む
     #--------------------------------------
-    df = pd.read_excel('../entry/XLS/銘柄コード.xlsx',index_col=0)
+    df = pd.read_excel('../Input/XLS/銘柄コード.xlsx',index_col=0)
     print(df)
 
     # DBに接続

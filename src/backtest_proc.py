@@ -34,7 +34,7 @@ class KabInf:
     def __init__(self, lineave=200, break_offset=0, macd_offset=0, rsi_border=30, rsi_per=25, rsi_max=59, rsi_period=10, breakout=5, sell_period=3, past_period=(-1200)):
         self.lineave = lineave                  # 買いシグナルに使用する長期移動平均線(上昇時に買)
         self.macd_offset = macd_offset          # MACDとシグナルの開き
-        self.break_offset = break_offset * 0.01 # ブレイクアウトオフセット。上限を何%超えたか。(1/100で計算)
+        self.break_offset = break_offset        # ブレイクアウトオフセット。上限を何%超えたか。(1/100で計算)
         self.rsi_border = rsi_border            # RSIの下限値。scr_rsi_perが無効（-1）の時に採用する。
         self.rsi_per = rsi_per                  # RSIの下限を全体の%で決める時の値。-1の時はrsi_borderを使用。
         self.rsi_max = rsi_max                  # 買シグナルを出す上限RSI
@@ -157,7 +157,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         df['close'] = df['close'].astype('int64')
         df['volume'] = df['volume'].astype('int64')
         df['SMA5'] = df['close'].rolling(window=5).mean()               # 5日移動平均を追加
-        if jdg_mov == True:    
+        if (jdg_mov == True) or (jdg_ind == True) :    
             df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
             df['SMASET'] = df['close'].rolling(window=Prm.lineave).mean()   # 設定した移動平均を追加
     except:
@@ -168,11 +168,11 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         return (-1)
     price = df["close"].values[-1]
     # 最新価格が10000を超える株は対象外とする（資金的にまだ早い）
-    if price > 10000:
-        return (-1)
+#    if price > 10000:
+#        return (-1)
 
     #日付をインデックスにして、必要なアイテム順に並び替え
-    if jdg_mov == True:
+    if (jdg_mov == True) or (jdg_ind == True) :    
         df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA25","SMASET"]]
     else:
         df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5"]]
@@ -209,7 +209,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         # 移動平均が算出可能な日付付近までスキップ
         wkdf= pd.DataFrame([row])
         bkdf = bkdf.append(wkdf,ignore_index=True)
-        if jdg_mov == True:
+        if (jdg_mov == True) or (jdg_ind == True) :    
             if numpy.isnan(wkdf["SMASET"].values) == True:
                 continue
         else:
@@ -236,7 +236,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         i_low = row.low                             # 安値取得
         i_high = row.high                           # 高値取得
         if jdg_mov == True:
-            i_sma5 = row.SMA5                           # 5日移動平均値取得
+            i_sma5 = row.SMA5                       # 5日移動平均値取得
             i_sma25 = row.SMA25                     # 25日移動平均値取得
 
 
@@ -245,9 +245,10 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         #----------------------
         if jdg_ind == True:
             try:
-                ind_sma5 = int(df_indicator.at[str(idx_date.date()), "SMA5"][0])
-                ind_sma75 = int(df_indicator.at[str(idx_date.date()), "SMA75"][0])
-                ind_close = df_indicator.at[str(idx_date.date()), "close"][0]
+                dt = str(idx_date.date())
+                ind_sma5 = int(df_indicator.at[dt, "SMA5"])
+                ind_sma75 = int(df_indicator.at[dt, "SMA75"])
+                ind_close = df_indicator.at[dt, "close"]
             except:
                 print(str(idx_date.date()),'指標移動平均値取得エラー')
                 ind_sma5 = ind_presma5
@@ -285,7 +286,6 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
                 if ind_sma75 > ind_close:
                 # 指標の移動平均値が前日よりも低ければ売りモード
 #                if  ind_presma5 > ind_sma5:    (75のほうがちょっとよかったけど5の上下よりはいい)
-#                if i_sma25 < i_presma25:
                     sb_mode = DEF.MODE_SELL
                 else:
                     sb_mode = DEF.MODE_BUY
@@ -294,7 +294,6 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
             ind_presma5 = ind_sma5
             ind_presma75 = ind_sma75
             ind_preclose = ind_close
-            i_presma25 = i_sma25
         else: # 指標判定が有効でない時は自銘柄の短期とで売買を判定する
             # 両建ての場合
             if req_sb_mode == DEF.MODE_BOTH:
@@ -305,7 +304,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
                     sb_mode = DEF.MODE_BUY
 
     
-#        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-09-03'):
+#        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-03-12'):
 #            print(bkdf)
         #==============================================================================================
         # 売却処理

@@ -16,7 +16,6 @@ def getPeriodKabuData(code, past_period, conn, cursor):
 
     # 指定期間のデータをDBから読み出す
     df = db.read_rec_period(conn, cursor, str(code), str_date_sta, str_date_end)
-    print(df)
     #df.columns = ["datetime","open","high","low","close","volume"]
     try:
         df['datetime'] = df['datetime'].astype('datetime64')

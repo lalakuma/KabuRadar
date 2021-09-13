@@ -1,6 +1,7 @@
 import pandas as pd
 import sqlight as db
 import getConfig
+import glob
 
 ############################################
 # CODEの有効無効設定
@@ -8,7 +9,10 @@ import getConfig
 ############################################
 def set_code_setting():
     path = getConfig.get_codeset_path()
-    df_csv = pd.read_csv(path, encoding="ms932", sep=",")
+    allFiles = glob.glob(path + "*.csv") # 指定したフォルダーの全エクセルファイルを変数に代入します
+    filePath = allFiles[0]
+
+    df_csv = pd.read_csv(filePath, encoding="ms932", sep=",")
 
     df_ena = pd.DataFrame(columns=['code', 'pf', 'Enable'])
     lstDisCode = []

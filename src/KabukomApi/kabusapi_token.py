@@ -2,8 +2,8 @@ import urllib.request
 import json
 import pprint
 
-def getToken():
-	obj = { 'APIPassword': 'morino12345' }
+def getToken(passwd):
+	obj = { 'APIPassword': passwd }
 	json_data = json.dumps(obj).encode('utf8')
 
 	url = 'http://localhost:18080/kabusapi/token'

@@ -209,8 +209,8 @@ def add_records(conn, code, lst_price):
 def one_marge_df_records(conn, cursor, code, df):
 
     idx = df.index[-1]
-#    str_date = str(idx.date())
     str_date = str(idx)
+#    str_date = str(idx.date())
 
     # 同一日付のレコードをデータベースから削除
     del_price_one_rec(conn, cursor, code, str_date)
@@ -317,7 +317,7 @@ def del_price_one_rec(conn, cursor, code, date):
 ##########################################################################
 def del_price_after_date(conn, cursor, code, date):
 
-    sql = 'delete from tbl_' + code + ' WHERE datetime > "' + date +'"';
+    sql = 'delete from tbl_' + code + ' WHERE datetime >= "' + date +'"';
 
     cursor.execute(sql)
     conn.commit()
