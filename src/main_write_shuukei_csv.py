@@ -248,4 +248,4 @@ def shuukei_toCsv(prm):
         df.to_csv(strpath, encoding="shift_jis")    
     
 #shuukei_toCsv(0)
-shuukei_makeExl(0)
+#shuukei_makeExl(0)
