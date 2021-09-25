@@ -4,11 +4,12 @@ import backtest_proc as bktst
 import main_write_shuukei_csv as shuukei
 import getPeriodKabu as pkabu
 import pandas as pd
-from datetime import datetime, date, timedelta
+import getConfig as conf
+import main_kabustation_trade as kabust
 ############################################
 # 結果をCSVファイルに書き込む
 ############################################
-def write_csv(dt, prm):
+def write_csv(dt, kekka_path):
     if dt.entrycnt != 0:
         winrate = bktst.KabInf.get_winrate(dt)
         wlstr = "_rsi"+ str(dt.adopt_rsi) + \
@@ -18,30 +19,42 @@ def write_csv(dt, prm):
                 "_pg" + str(dt.plusgain) + \
                 "_mg" + str(dt.minusgain)
                     
-        dt.outdf.to_csv("../analys/" + str(prm) + "/code" + str(code) + wlstr + ".csv", encoding="shift_jis")    
+        dt.outdf.to_csv(kekka_path + "/code" + str(code) + wlstr + ".csv", encoding="shift_jis")    
 
 # DBに接続
 conn, cursor = db.connect_db()
 # 全銘柄コードリスト取得
 codes = db.read_code_all(cursor, "tbl_codelist")
 
-PAST_PERIOD=(-4279)     # (最古)過去4279日間のデータを検証 (2010年1月4日開始) これ以前はnullの混ざる銘柄が多い
+#PAST_PERIOD=(-4279)     # (最古)過去4279日間のデータを検証 (2010年1月4日開始) これ以前はnullの混ざる銘柄が多い
 #PAST_PERIOD=(-4600)     # (最古)過去4600日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 #PAST_PERIOD=(-360)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 #PAST_PERIOD=(-170)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
-#PAST_PERIOD=(-15)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
+PAST_PERIOD=(-10)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 
 for offset in range(1):
     cls_dt = bktst.KabInf(sell_period = 0,
                             rsi_max=100, 
                             rsi_period = 14,
-                            breakout=6, 
+                            breakout=7,
                             break_offset=0.01, 
                             macd_offset=5, 
                             lineave=100, 
                             past_period=PAST_PERIOD, 
                             rsi_per=30)
-    cls_dt.write_prm_tocsv(offset)      # パラメータをCSVに保存
+
+    #--------------------------
+    # 結果格納フォルダパス取得
+    #--------------------------
+    exec_mode = 1   # 実行モード(0:テスト用、1:本番用)
+    # 結果保存用のパスを取得
+    if exec_mode == 1:  # 本番モードの時
+        kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_HONBAN)
+    else:               # テストモードの時
+        kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_SHUUKEI)
+        kekka_path = kekka_path + str(offset) + "\\" #フォルダ名    
+
+    cls_dt.write_prm_tocsv(kekka_path)      # パラメータをCSVに保存
     testmode = 0    # 単発テストモード 1:有効、0:無効
 
     CD_NIKKEI = 1321
@@ -78,7 +91,7 @@ for offset in range(1):
                 continue
             else:
                 # CSVに出力
-                write_csv(cls_dt, offset)
+                write_csv(cls_dt, offset, kekka_path)
                 break
             ### 単発テスト用 ↑↑↑↑ END ################################################
         else:
@@ -97,11 +110,11 @@ for offset in range(1):
                 continue
     
         # CSVに出力
-        write_csv(cls_dt, offset)
+        write_csv(cls_dt, kekka_path)
 
     # 集計処理
-    shuukei.shuukei_toCsv(offset)
-    shuukei.shuukei_makeExl(offset)
+    shuukei.shuukei_toCsv(kekka_path)
+    lst_shuukei = shuukei.shuukei_makeExl(kekka_path)
 
 # DBクローズ
 db.close_db(conn)

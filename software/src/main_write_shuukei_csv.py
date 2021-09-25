@@ -9,7 +9,7 @@ import getConfig
 import sqlight as db
 from openpyxl.styles import Font, PatternFill
 from openpyxl.formatting.rule import CellIsRule, FormulaRule
-
+import getConfig as conf
 #################################################################
 # トレード銘柄決定処理
 # 引数：mode        (MODE_BUY=買い、MODE_SELL=売り)
@@ -117,6 +117,14 @@ def decide_trade(DirPath):
                     dic_row['mark'] = "決済"       # 購入はないので決済のみに書き換え
                 else:
                     dic_row['mark'] = "決済+" + dic_row['mark']
+        
+            #----------------------------#
+            # 決済がなければ利益を0にする
+            #----------------------------#
+            if dic_row["mark"] == "新買" or dic_row["mark"] == "新売":
+                dic_row["buygain"] = 0
+                dic_row["sellgain"] = 0
+
         #----------------------------------
         # 次の日付グループに向けての準備
         #----------------------------------
@@ -136,25 +144,24 @@ def decide_trade(DirPath):
     return df_con, lst_data
     
 
-def shuukei_makeExl(prm):
+def shuukei_makeExl(shuukei_path):
     fileShukei = "集計.xlsx"
-    path = getConfig.get_shuukei_path()
     # トレード決定処理
-    df_con, lst_data = decide_trade(path + str(prm))
+    df_con, lst_data = decide_trade(shuukei_path)
     if len(lst_data) == 0:
         print("集計対象ファイルがありません。")
         return
 
     # エクセルに書き込み
-    df_con.to_excel(path + str(prm) + "/" + fileShukei, sheet_name='全コード結合', encoding="shift_jis")
+    df_con.to_excel(shuukei_path + fileShukei, sheet_name='全コード結合', encoding="shift_jis")
 
     dfreal = pd.DataFrame(lst_data)    
-    with pd.ExcelWriter(path + str(prm) + "/" + fileShukei, engine="openpyxl", mode="a") as writer:
+    with pd.ExcelWriter(shuukei_path + fileShukei, engine="openpyxl", mode="a") as writer:
         dfreal.to_excel(writer, sheet_name='1日10000以下', index=False)
 
     # エクセルファイルの先頭行にフィルターをつける
     if(len(df_con) > 0):
-        wb= px.load_workbook(path + str(prm) + "/" + fileShukei)
+        wb= px.load_workbook(shuukei_path + fileShukei)
         ws = wb.active
         ws.column_dimensions['B'].width =22
         ws.column_dimensions['F'].width =10
@@ -187,12 +194,13 @@ def shuukei_makeExl(prm):
         ws1.conditional_formatting.add(fmtarea, formula_rule2)
 
     if(len(df_con) > 0):
-        wb.save(path + str(prm) + "/" + fileShukei)
+        wb.save(shuukei_path + fileShukei)
+    
+    return lst_data
 
 
-def shuukei_toCsv(prm):
-    filelst = os.listdir(path='../analys/' + str(prm) + "/")
-
+def shuukei_toCsv(shuukei_path):
+    filelst = os.listdir(path=shuukei_path)
     df = pd.DataFrame()
 
     wk_pf = 0.0
@@ -243,8 +251,8 @@ def shuukei_toCsv(prm):
             strpfall = "PF" + str(round(total_pgain / total_mgain, 3))
         else:
             strpfall = "PF" + str(round(total_pgain))
-        #wlstr = "_prm" + strprm + "_rsi"+ str(dt.adopt_rsi) + "_W" + str(dt.win) + "L" + str(dt.lose) + "_" + str(dt.winrate) + "%_" + str(dt.income)
-        strpath = "../analys/" + str(prm) + "/" + strpfall + "_" + "W" + str(cnt_win) + "L" + str(cnt_lose) + "_" + strWinPer + "_" + strincome + ".csv"
+
+        strpath = shuukei_path + strpfall + "_" + "W" + str(cnt_win) + "L" + str(cnt_lose) + "_" + strWinPer + "_" + strincome + ".csv"
         df.to_csv(strpath, encoding="shift_jis")    
     
 #shuukei_toCsv(0)

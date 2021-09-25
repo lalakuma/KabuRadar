@@ -5,16 +5,13 @@ from numpy import true_divide
 from numpy.lib.function_base import append
 import pandas as pd
 import datetime
-
-# 定数を設定(定数の場合は変数名を大文字で設定する)
-DB_PATH = '../DB/KabuRadar.db'
-#DB_PATH = '//192.168.1.13/raspberrypi_share/KabuRadar/DB/KabuRadar.db'
+import getConfig as conf
 
 ##########################################################################
 #   DBに接続する
 ##########################################################################
 def connect_db():
-    dbname = (DB_PATH)#データベース名.db拡張子で設定
+    dbname = conf.get_config(conf.CONF_SEC_DATABASE, conf.CONF_KEY_PATH_DB)
     conn = sqlite3.connect(dbname, isolation_level=None)#データベースを作成、自動コミット機能ON
 
     cursor = conn.cursor() #カーソルオブジェクトを作成

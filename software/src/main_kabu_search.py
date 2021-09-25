@@ -7,6 +7,7 @@ import getPeriodKabu as pkabu
 import technical_BreakOut as tc_break
 import technical_Beard as tc_beard
 import pandas as pd
+import getConfig as conf
 
 lst_codes = []
 
@@ -15,15 +16,16 @@ lst_codes = []
 #****************************
 # ブレイクアト判定期間に使用する値
 scr_break = 6
+break_offset = 0.01
 #--------------------------------------
 # 有効判定設定
 #--------------------------------------
 # ローソク判定
-jdg_candle  = True
+jdg_candle  = False
 # BREAK OUT判定
 jdg_brk  = True
 # 髭判定
-jdg_berd = True
+jdg_berd = False
 #--------------------------------------
 # DBから全銘柄コードを取得
 #--------------------------------------
@@ -34,11 +36,6 @@ codes = db.read_code_all(cursor, "tbl_codelist")
 
 # データ取得期間に過去80日間を指定(75日移動平均線を使用する為)
 PAST_PERIOD=(-20)
-CD_NIKKEI = 1321    # 日経平均ETF
-code = CD_NIKKEI
-
-# 指標株価を取得する
-df_indicator = pkabu.getPeriodKabuData(code, PAST_PERIOD, conn, cursor)
 
 # 個別銘柄 期間データ取得
 today = date.today()                                                                    # 今日(日付型)
@@ -58,6 +55,9 @@ sb_mode = DEF.MODE_BUY
 # スクリーニング結果格納用データフレーム
 cols = ["code","PF","mark","close"]
 df_rlt = pd.DataFrame(index=[], columns=cols)
+
+# 解析結果保存場所を取得
+kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_HONBAN)
 
 # 銘柄コードリストに登録されている全コードに対して処理を行う
 for code in codes:
@@ -82,22 +82,17 @@ for code in codes:
         df['close'] = df['close'].astype('int64')
         df['volume'] = df['volume'].astype('int64')
         df['SMA5'] = df['close'].rolling(window=5).mean()       # 5日移動平均を追加
-        df['SMA25'] = df['close'].rolling(window=25).mean()     # 25日移動平均を追加
     except:
         print(code + ": Error")
         continue        
 
     #日付をインデックスにして、必要なアイテム順に並び替え
-    df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA25"]]
+    df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5"]]
     # 終値取得
     i_close = df_price["close"].values[-1]                  # 終値取得
     i_open = df_price["open"].values[-1]                    # 始値取得
     i_low = df_price["low"].values[-1]                      # 安値取得
     i_high = df_price["high"].values[-1]                    # 高値取得
-
-    # 指標株価の個別データを取得
-#    ind_sma75 = int(df_indicator["SMA75"].values[-1])
-    ind_close = df_indicator["close"].values[-1]
 
     # 銘柄コードで調査用 
 #    if str(code) == "1801":
@@ -135,7 +130,7 @@ for code in codes:
     # ブレイクアウト判定
     #----------------------
     if jdg_brk == True:
-        if tc_break.jdg_break_out(sb_mode, df, scr_break, i_close) == 0:
+        if tc_break.jdg_break_out(sb_mode, df, scr_break, break_offset, i_close) == 0:
             continue
     #----------------------
     # 髭判定

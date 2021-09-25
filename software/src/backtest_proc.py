@@ -11,6 +11,7 @@ import sqlight as db
 import numpy
 import os
 from datetime import datetime, date, timedelta
+import getConfig as conf
 
 #****************************
 # クラス定義
@@ -57,7 +58,7 @@ class KabInf:
     #***************************************
     # 解析に使用したパラメータをCSVに保存する
     #***************************************
-    def write_prm_tocsv(self, inprm):
+    def write_prm_tocsv(self, analys_path):
 
         tup_prm = { 'lineave' : (self.lineave),
                     'macd_offset' : (self.macd_offset),
@@ -68,13 +69,11 @@ class KabInf:
                     'breakout' : (self.breakout),
                     'sell_period' : (self.sell_period),
                     'past_period' : (self.past_period)}
-        print(tup_prm)
         strdt = datetime.strftime(datetime.now(), '%Y-%m-%d_%H%M%S')
         df_prm = pd.DataFrame(tup_prm,index=[datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S')])
-        print(df_prm)
-        analys_path = "../analys/" + str(inprm) + "/" #フォルダ名
-        if not os.path.exists(analys_path):#ディレクトリがなかったら
-            os.mkdir(analys_path)#作成したいフォルダ名を作成
+
+        if not os.path.exists(analys_path):     # ディレクトリがない場合
+            os.mkdir(analys_path)               # フォルダを作成
 
         df_prm.to_csv(analys_path + "設定_" + strdt + ".csv", encoding="shift_jis")    
 
@@ -168,8 +167,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         return (-1)
     price = df["close"].values[-1]
     # 最新価格が10000を超える株は対象外とする（資金的にまだ早い）
-#    if price > 10000:
-#        return (-1)
+    if price > 10000:
+        return (-1)
 
     #日付をインデックスにして、必要なアイテム順に並び替え
     if (jdg_mov == True) or (jdg_ind == True) :    
@@ -209,6 +208,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         # 移動平均が算出可能な日付付近までスキップ
         wkdf= pd.DataFrame([row])
         bkdf = bkdf.append(wkdf,ignore_index=True)
+        lastidx_bk = len(bkdf) - 1
         if (jdg_mov == True) or (jdg_ind == True) :    
             if numpy.isnan(wkdf["SMASET"].values) == True:
                 continue
@@ -359,7 +359,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         if buy_pos > 0:
             # 保持日数をインクリメント
             cnt_buyholddays += 1
-            bkdf["mark"].iloc[-1] = "継続"
+            bkdf.loc[lastidx_bk, "mark"] = "継続"
 
             # 購入時のローソク足が陽線の場合、購入時の始値を下回ったら売り
             # 購入時のローソク足が陰線の場合、購入時の安値を下回ったら売り
@@ -434,16 +434,16 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
                         wkgain = (diff/(i_close)) * 1000
                         minusgain += wkgain
 
-                bkdf["mark"].iloc[-1] = "返売"
+                bkdf.loc[lastidx_bk, "mark"] = "返売"
 
         #----------------------
         # 売買数と利益を出力
         #----------------------
-        bkdf["buy"].iloc[-1] = buy_pos
-        bkdf["buygain"].iloc[-1] = buygain
-        bkdf["sell"].iloc[-1] = sell_pos
-        bkdf["sellgain"].iloc[-1] = sellgain
-        bkdf["income"].iloc[-1] = income
+        bkdf.loc[lastidx_bk, "buy"] = buy_pos
+        bkdf.loc[lastidx_bk, "buygain"] = buygain
+        bkdf.loc[lastidx_bk, "sell"] = sell_pos
+        bkdf.loc[lastidx_bk, "sellgain"] = sellgain
+        bkdf.loc[lastidx_bk, "income"] = income
 
         #===========================================================================#
         # ここから購入判定処理
@@ -517,7 +517,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         #----------------------
         if jdg_brk == True:
             dfbreak = bkdf.rename(columns={'Index': 'datetime'})
-            if tc_break.jdg_break_out(sb_mode, dfbreak, Prm.breakout, Prm.break_offset, i_close) == 0:
+            if tc_break.jdg_break_out2(sb_mode, dfbreak, Prm.breakout, Prm.break_offset, i_close) == 0:
                 continue
         #----------------------
         # 髭判定
@@ -533,11 +533,11 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         if sb_mode == DEF.MODE_BUY:
             buy_pos += 1
             entrycnt +=1
-            bkdf["buy"].iloc[-1] = buy_pos
+            bkdf.loc[lastidx_bk, "buy"] = buy_pos
             if buy_price == 0:
                 pre_low = i_low
                 buy_price = i_close
-                bkdf["mark"].iloc[-1] = "新買"
+                bkdf.loc[lastidx_bk, "mark"] = "新買"
             #--------------------------------------
             # ここまで残ったコードをリストに追加
             #--------------------------------------
@@ -554,11 +554,11 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         else:
             sell_pos += 1
             entrycnt +=1
-            bkdf["sell"].iloc[-1] = sell_pos
+            bkdf.loc[lastidx_bk, "sell"] = sell_pos
             if sell_price == 0:
                 pre_high = i_high
                 sell_price = i_close
-                bkdf["mark"].iloc[-1] = "新売"
+                bkdf.loc[lastidx_bk, "mark"] = "新売"
             #--------------------------------------
             # ここまで残ったコードをリストに追加
             #--------------------------------------
