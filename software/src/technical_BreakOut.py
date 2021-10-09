@@ -59,8 +59,8 @@ def jdg_break_out2(sb_mode, df, period, offset, close):
         # 前日の終値取得
         close_bef1 = breakdf_bef1["close"].values[-1]
         # 指定期間で一番の高値を取得
-        df_max = breakdf_bef2.rolling(window=size-2).max()
-        max = df_max["high"].values[-1]
+        df_max = breakdf_bef2["high"].rolling(window=size-2).max()
+        max = df_max.values[-1]
 
         # 前日の終値が前々日までの期間の最高値より低い時に処理する
         if close_bef1 < max:

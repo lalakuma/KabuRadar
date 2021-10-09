@@ -235,8 +235,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         i_close = row.close                         # 終値取得
         i_low = row.low                             # 安値取得
         i_high = row.high                           # 高値取得
+        i_sma5 = row.SMA5                           # 5日移動平均値取得
         if jdg_mov == True:
-            i_sma5 = row.SMA5                       # 5日移動平均値取得
             i_sma25 = row.SMA25                     # 25日移動平均値取得
 
 
@@ -350,7 +350,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
                         wkgain = (diff/(i_close)) * 1000
                         minusgain += wkgain
 
-                bkdf["mark"].iloc[-1] = "返買"
+                bkdf.loc[lastidx_bk, "mark"] = "返買"
 
         #-----------------------
         # 買いポジションがある時

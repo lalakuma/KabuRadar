@@ -21,7 +21,7 @@ codes = db.read_code_all(cursor, "tbl_codelist")
 # KabukomApiで価格情報を取得
 #--------------------------------------
 # APIにてトークン取得
-tkn = token.getToken()
+tkn = token.getToken('morino12345')
 
 for code in codes:
     # 登録銘柄全削除（レジスト数エラー対策）

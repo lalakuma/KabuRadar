@@ -10,7 +10,7 @@ obj = { 'Password': '123456',
         'Side': '2',
         'Qty': 3,
         'ClosePositionOrder': 1,
-        'FrontOrderType': 30
+        'FrontOrderType': 30,
         'Price': 22000,
         'ExpireDay': 0,
         'ReverseLimitOrder': {

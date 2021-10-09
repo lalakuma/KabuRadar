@@ -17,6 +17,7 @@ CONF_KEY_PATH_HONBAN = 'PATH_HONBAN'
 CONF_KEY_PATH_CODESET = 'PATH_CODESET'
 CONF_KEY_PATH_DB = 'PATH_DB'
 CONF_KEY_API_PASSWD = 'API_PASSWD'
+CONF_KEY_TRD_PASSWD = 'TRD_PASSWD'
 ##############################################
 #   CODE設定情報登録用のパスを取得
 ##############################################

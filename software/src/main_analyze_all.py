@@ -5,7 +5,10 @@ import main_write_shuukei_csv as shuukei
 import getPeriodKabu as pkabu
 import pandas as pd
 import getConfig as conf
-import main_kabustation_trade as kabust
+#import main_kabustation_trade as kabust
+import pathlib
+import shutil
+import os
 ############################################
 # 結果をCSVファイルに書き込む
 ############################################
@@ -30,7 +33,7 @@ codes = db.read_code_all(cursor, "tbl_codelist")
 #PAST_PERIOD=(-4600)     # (最古)過去4600日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 #PAST_PERIOD=(-360)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 #PAST_PERIOD=(-170)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
-PAST_PERIOD=(-10)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
+PAST_PERIOD=(-15)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 
 for offset in range(1):
     cls_dt = bktst.KabInf(sell_period = 0,
@@ -50,6 +53,10 @@ for offset in range(1):
     # 結果保存用のパスを取得
     if exec_mode == 1:  # 本番モードの時
         kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_HONBAN)
+        if os.path.exists(kekka_path):     # ディレクトリがない場合
+            p_sub_dir = pathlib.Path(kekka_path)
+            shutil.rmtree(p_sub_dir)
+
     else:               # テストモードの時
         kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_SHUUKEI)
         kekka_path = kekka_path + str(offset) + "\\" #フォルダ名    
