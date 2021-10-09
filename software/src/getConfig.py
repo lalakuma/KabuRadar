@@ -3,7 +3,7 @@ import configparser
 import os
 import errno
 
-config_ini_path = '../config/config.ini'
+config_ini_path = '../../Input/config/config.ini'
 
 # セクション名称定義
 CONF_SEC_SHUUKEI = 'SHUUKEI'
