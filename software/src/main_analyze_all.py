@@ -9,6 +9,7 @@ import getConfig as conf
 import pathlib
 import shutil
 import os
+import glob
 ############################################
 # 結果をCSVファイルに書き込む
 ############################################
@@ -33,29 +34,36 @@ codes = db.read_code_all(cursor, "tbl_codelist")
 #PAST_PERIOD=(-4600)     # (最古)過去4600日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 #PAST_PERIOD=(-360)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 #PAST_PERIOD=(-170)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
-PAST_PERIOD=(-15)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
+#PAST_PERIOD=(-15)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
+scrsec = conf.CONF_SEC_SCR
+PAST_PERIOD = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_PAST_PERIOD)) * (-1)
 
 for offset in range(1):
-    cls_dt = bktst.KabInf(sell_period = 0,
-                            rsi_max=100, 
-                            rsi_period = 14,
-                            breakout=7,
-                            break_offset=0.01, 
-                            macd_offset=5, 
-                            lineave=100, 
-                            past_period=PAST_PERIOD, 
-                            rsi_per=30)
+    cls_dt = bktst.KabInf(sell_period = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SELL_PERIOD)),
+                            breakout = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_BREAK_PERIOD)),
+                            break_offset = float(conf.get_config(scrsec, conf.CONF_KEY_SCR_BREAK_OFSET)), 
+                            macd_offset = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_MACD_OFSET)), 
+                            lineave = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_LINEAVE)), 
+                            past_period = PAST_PERIOD, 
+                            rsi_period = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_RSI_PERIOD)),
+                            rsi_border = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_RSI_BORDER)), 
+                            rsi_max = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_RSI_MAX)), 
+                            rsi_per = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_RSI_PER)))
 
     #--------------------------
     # 結果格納フォルダパス取得
     #--------------------------
-    exec_mode = 1   # 実行モード(0:テスト用、1:本番用)
+    exec_mode = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_EXEC_MODE))   # 実行モード(0:テスト用、1:本番用)
     # 結果保存用のパスを取得
     if exec_mode == 1:  # 本番モードの時
         kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_HONBAN)
         if os.path.exists(kekka_path):     # ディレクトリがない場合
-            p_sub_dir = pathlib.Path(kekka_path)
-            shutil.rmtree(p_sub_dir)
+            # 全てのCSVファイルを削除
+            for filename in  glob.glob(kekka_path + '*.csv'):
+                os.remove(filename)
+            # 集計ファイルを削除
+            if os.path.exists(kekka_path + '集計.xlsx'):
+                os.remove(kekka_path + '集計.xlsx')
 
     else:               # テストモードの時
         kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_SHUUKEI)
@@ -64,9 +72,9 @@ for offset in range(1):
     cls_dt.write_prm_tocsv(kekka_path)      # パラメータをCSVに保存
     testmode = 0    # 単発テストモード 1:有効、0:無効
 
-    CD_NIKKEI = 1321
+    CD_NIKKEI = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_IND_CODE))
     ind_code = CD_NIKKEI
-    ENA_IND = False
+    ENA_IND = conf.get_config(scrsec, conf.CONF_KEY_JDG_IND)
     df_indicator = pd.DataFrame()
     # 指標が有効な場合
     if ENA_IND == True:
@@ -103,19 +111,19 @@ for offset in range(1):
             ### 単発テスト用 ↑↑↑↑ END ################################################
         else:
             result = bktst.backtst_proc(code,
-                                    df_indicator,
-                                    cls_dt, 
-                                    req_sb_mode = DEF.MODE_BUY, 
-                                    jdg_candle = False,         # ローソク足判定
-                                    jdg_ind=ENA_IND, #False     # 指標銘柄判定
-                                    jdg_mov=False,              # 移動平均線判定
-                                    jdg_rsi=False,              # RSI判定
-                                    jdg_macd=False,             # MACD判定
-                                    jdg_brk=True,               # ブレイク判定
-                                    jdg_berd=False)              # 髭判定
+                    df_indicator,
+                    cls_dt, 
+                    req_sb_mode = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SELLBUY)),  # 売買モード
+                    jdg_candle = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_CAND)),      # ローソク足判定
+                    jdg_ind = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_IND)),          # 指標銘柄判定
+                    jdg_mov = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV)),          # 移動平均線判定
+                    jdg_rsi = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSI)),          # RSI判定
+                    jdg_macd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MACD)),        # MACD判定
+                    jdg_brk = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BRK)),          # ブレイク判定
+                    jdg_berd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BERD)))        # 髭判定
             if result == -1:
                 continue
-    
+
         # CSVに出力
         write_csv(cls_dt, kekka_path)
 

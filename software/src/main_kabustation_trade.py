@@ -11,6 +11,10 @@ import main_write_shuukei_csv as shuukei
 import datetime
 import time
 import line
+
+
+
+
 ##############################################
 # カブコムAPIで新規購入
 ##############################################
