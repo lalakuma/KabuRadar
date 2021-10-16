@@ -2,7 +2,7 @@ import urllib.request
 import json
 import pprint
 
-def kabusapi_sendorder_margin_new(token, reqdat):
+def kabusapi_sendorder_margin_new(token, reqdat, logger):
     
     obj = { 
         'Password': reqdat['Password'],
@@ -43,4 +43,5 @@ def kabusapi_sendorder_margin_new(token, reqdat):
     except Exception as e:
         print(e)
 
+    logger.info("[購入] content=%s",content)    
     return content

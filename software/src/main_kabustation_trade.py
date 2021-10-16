@@ -11,14 +11,12 @@ import main_write_shuukei_csv as shuukei
 import datetime
 import time
 import line
-
-
-
-
+import logging
+ 
 ##############################################
 # カブコムAPIで新規購入
 ##############################################
-def kabukom_entry(lst_data):
+def kabukom_entry(lst_data, logger):
     # パスワード取得
     apipasswd = conf.get_config(conf.CONF_SEC_KABUSAPI, conf.CONF_KEY_API_PASSWD)
     trdpasswd = conf.get_config(conf.CONF_SEC_KABUSAPI, conf.CONF_KEY_TRD_PASSWD)
@@ -59,13 +57,13 @@ def kabukom_entry(lst_data):
             'ExpireDay': 0,                 # 13.注文有効期限
         }
 
-        ret = margin_new.kabusapi_sendorder_margin_new(tkn["Token"], reqData)
+        ret = margin_new.kabusapi_sendorder_margin_new(tkn["Token"], reqData, logger)
         time.sleep(1)
 
 ##############################################
 # カブコムAPIでポジション決済
 ##############################################
-def kabukom_settle(lst_data):
+def kabukom_settle(lst_data, logger):
     # パスワード取得
     apipasswd = conf.get_config(conf.CONF_SEC_KABUSAPI, conf.CONF_KEY_API_PASSWD)
     trdpasswd = conf.get_config(conf.CONF_SEC_KABUSAPI, conf.CONF_KEY_TRD_PASSWD)
@@ -107,7 +105,7 @@ def kabukom_settle(lst_data):
                 'ExpireDay': 0,                 # 14.注文有効期限
             }
         print(reqData)
-        ret = margin_pay.kabusapi_sendorder_margin_payClose(tkn["Token"], reqData)
+        ret = margin_pay.kabusapi_sendorder_margin_payClose(tkn["Token"], reqData, logger)
         time.sleep(1)
 
 ###########################
@@ -117,6 +115,17 @@ kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_HONBAN)
 df, lst_shuukei = shuukei.decide_trade(kekka_path)
 
 lst_trade = []
+
+#----------------------------------------
+# LOG設定
+#----------------------------------------
+sth = logging.StreamHandler()
+flh = logging.FileHandler('../../output/log/debug.log')
+ 
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO,
+                    handlers=[sth, flh])
+logger = logging.getLogger(__name__)
+logger.info("処理 main_kabustation_trade を開始します。")
 
 #----------------------------------------
 # 当日の取引データのみを抽出してリスト化
@@ -154,7 +163,7 @@ if iWeek != 6 and iWeek != 7:            #土日以外
 
     # 14:30～15：00の間に実行された場合はエントリー処理を行う
     if tm < datetime.time(15,0,0) and tm > datetime.time(14,30,0):
-        kabukom_entry(lst_trade)
+        kabukom_entry(lst_trade, logger)
     # 15:00～15：00の間に実行された場合は決済処理を行う
     elif tm > datetime.time(15,0,0) and tm < datetime.time(15,30,0):
-        kabukom_settle(lst_trade)
+        kabukom_settle(lst_trade, logger)

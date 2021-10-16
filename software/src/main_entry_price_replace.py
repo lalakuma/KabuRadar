@@ -28,14 +28,16 @@ for code in codes:
         # ヤフーAPIにより株価データ取得
         df_daily = yahoo.get_pricedata(code, ptype, period, frequency)
         print(df_daily)
-        idx = df_daily.index[0]
-        str_date = str(idx)
 
-        # 指定日以降のレコードを削除
-        db.del_price_after_date(conn, cursor, code, str_date)
+        if df_daily.empty == False:
+            idx = df_daily.index[0]
+            str_date = str(idx)
 
-        # DBにレコードを追加
-        db.add_df_records(conn, code, df_daily)
+            # 指定日以降のレコードを削除
+            db.del_price_after_date(conn, cursor, code, str_date)
+
+            # DBにレコードを追加
+            db.add_df_records(conn, code, df_daily)
 
     print(code)
 

@@ -2,7 +2,7 @@ import urllib.request
 import json
 import pprint
 
-def kabusapi_sendorder_margin_payClose(token, reqdat):
+def kabusapi_sendorder_margin_payClose(token, reqdat, logger):
     obj = { 'Password': reqdat['Password'],
             'Symbol': reqdat['Symbol'],
             'Exchange': reqdat['Exchange'],
@@ -41,5 +41,6 @@ def kabusapi_sendorder_margin_payClose(token, reqdat):
         pprint.pprint(content)
     except Exception as e:
         print(e)
-        
+    
+    logger.info("[決済] content=%s",content)    
     return content

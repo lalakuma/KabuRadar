@@ -10,6 +10,7 @@ import pathlib
 import shutil
 import os
 import glob
+import logging
 ############################################
 # 結果をCSVファイルに書き込む
 ############################################
@@ -25,11 +26,27 @@ def write_csv(dt, kekka_path):
                     
         dt.outdf.to_csv(kekka_path + "/code" + str(code) + wlstr + ".csv", encoding="shift_jis")    
 
+#----------------------------------------
+# LOG設定
+#----------------------------------------
+sth = logging.StreamHandler()
+flh = logging.FileHandler('../../output/log/debug.log')
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO,
+                    handlers=[sth, flh])
+logger = logging.getLogger(__name__)
+logger.info("処理 main_analyze_all を開始します。")
+
+#----------------------------------------
+# DBより解析対象銘柄を全て取得
+#----------------------------------------
 # DBに接続
 conn, cursor = db.connect_db()
 # 全銘柄コードリスト取得
 codes = db.read_code_all(cursor, "tbl_codelist")
 
+#----------------------------------------
+# 設定ファイルより解析期間を取得
+#----------------------------------------
 #PAST_PERIOD=(-4279)     # (最古)過去4279日間のデータを検証 (2010年1月4日開始) これ以前はnullの混ざる銘柄が多い
 #PAST_PERIOD=(-4600)     # (最古)過去4600日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 #PAST_PERIOD=(-360)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
@@ -38,6 +55,9 @@ codes = db.read_code_all(cursor, "tbl_codelist")
 scrsec = conf.CONF_SEC_SCR
 PAST_PERIOD = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_PAST_PERIOD)) * (-1)
 
+#----------------------------------------
+# メイン処理
+#----------------------------------------
 for offset in range(1):
     cls_dt = bktst.KabInf(sell_period = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SELL_PERIOD)),
                             breakout = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_BREAK_PERIOD)),
