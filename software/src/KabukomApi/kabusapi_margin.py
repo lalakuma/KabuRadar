@@ -23,5 +23,6 @@ def get_margin(token):
         pprint.pprint(content)
     except Exception as e:
         print(e)
+        content = -1
             
     return content

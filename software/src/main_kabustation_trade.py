@@ -60,54 +60,6 @@ def kabukom_entry(lst_data, logger):
         ret = margin_new.kabusapi_sendorder_margin_new(tkn["Token"], reqData, logger)
         time.sleep(1)
 
-##############################################
-# カブコムAPIでポジション決済
-##############################################
-def kabukom_settle(lst_data, logger):
-    # パスワード取得
-    apipasswd = conf.get_config(conf.CONF_SEC_KABUSAPI, conf.CONF_KEY_API_PASSWD)
-    trdpasswd = conf.get_config(conf.CONF_SEC_KABUSAPI, conf.CONF_KEY_TRD_PASSWD)
-    # APIにてトークン取得
-    tkn = token.getToken(apipasswd)
-
-    for tdy in lst_data:
-        # 新規買い対象のみ処理する。それ以外は処理しない。
-        mark = tdy["mark"]
-        if "新売" in mark:
-            side = "2"
-            chMgn = 3
-            DlvType = 2
-            qty = 100       # 注文数量。今は100固定だけどそのうち株価によって調整する。
-        elif "新買" in mark:
-            side = "1"
-            chMgn = 3
-            DlvType = 2
-            qty = 100       # 注文数量。今は100固定だけどそのうち株価によって調整する。
-        else:
-            continue 
-
-        code = tdy['code']                      # コード取得
-        MTrdType = 1
-        reqData = { 
-                'Password': trdpasswd,          # 1.注文パスワード
-                'Symbol': code,                 # 2.銘柄コード
-                'Exchange': 1,                  # 3.市場コード (1:東証[固定])
-                'SecurityType': 1,              # 4.商品種別 (1:株式[固定])
-                'Side': side,                   # 5.売買区分 (1:売, 2:買)
-                'CashMargin': chMgn,            # 6.信用区分 (1:現物, 2:新規, 3:返済)
-                'MarginTradeType': MTrdType,    # 7.信用取引区分 (1:制度信用, 2:一般信用(長期), 3:一般信用(デイトレ))
-                'DelivType': DlvType,           # 8.受渡区分 (0:指定なし[信用新規時], 1:自動振替, 2:お預り金[信用返済時])
-                'AccountType': 4,               # 9.口座種別 (2:一般, 4:特定[固定], 12:法人)
-                'Qty': qty,                     # 10.注文数量
-                'ClosePositionOrder': 0,        # 11.日付（古い順）、損益（高い順） 
-                'FrontOrderType': 13,           # 12.執行条件 (13:寄成(前場), 16:引成(後場))
-                'Price': 0,                     # 13.注文価格 (成行の時は0を指定)
-                'ExpireDay': 0,                 # 14.注文有効期限
-            }
-        print(reqData)
-        ret = margin_pay.kabusapi_sendorder_margin_payClose(tkn["Token"], reqData, logger)
-        time.sleep(1)
-
 ###########################
 # メイン
 ###########################
@@ -164,6 +116,3 @@ if iWeek != 6 and iWeek != 7:            #土日以外
     # 14:30～15：00の間に実行された場合はエントリー処理を行う
     if tm < datetime.time(15,0,0) and tm > datetime.time(14,30,0):
         kabukom_entry(lst_trade, logger)
-    # 15:00～15：00の間に実行された場合は決済処理を行う
-    elif tm > datetime.time(15,0,0) and tm < datetime.time(15,30,0):
-        kabukom_settle(lst_trade, logger)

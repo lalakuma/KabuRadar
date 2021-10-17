@@ -20,7 +20,7 @@ def kabusapi_sendorder_margin_new(token, reqdat, logger):
         'ExpireDay': reqdat['ExpireDay'],
     }
 
-    json_data = json.dumps(reqdat).encode('utf-8')
+    json_data = json.dumps(obj).encode('utf-8')
 
     url = 'http://localhost:18080/kabusapi/sendorder'
     req = urllib.request.Request(url, json_data, method='POST')

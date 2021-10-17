@@ -13,7 +13,13 @@ def kabusapi_sendorder_margin_payClose(token, reqdat, logger):
             'DelivType': reqdat['DelivType'],
             'AccountType': reqdat['AccountType'],
             'Qty': reqdat['Qty'],
-            'ClosePositionOrder': reqdat['ClosePositionOrder'],
+#            'ClosePositionOrder': reqdat['ClosePositionOrder'],    # ClosePositionsとどちらか一方に指定
+            "ClosePositions": [
+            {
+            "HoldID": reqdat['ClosePos_Id'],
+            "Qty": reqdat['ClosePos_Qty']
+            }
+            ],            
             'FrontOrderType': reqdat['FrontOrderType'],
             'Price': reqdat['Price'],
             'ExpireDay': reqdat['ExpireDay'],

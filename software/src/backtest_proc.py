@@ -131,7 +131,6 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
     ind_preclose = 0
     i_presma25 = 0
     entrycnt = 0
-
     sb_mode = DEF.MODE_BUY  # 初期値は買い
     
     if req_sb_mode != DEF.MODE_BOTH:
@@ -239,16 +238,16 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         if jdg_mov == True:
             i_sma25 = row.SMA25                     # 25日移動平均値取得
 
-
         #----------------------
         # 指標銘柄判定
         #----------------------
         if jdg_ind == True:
             try:
                 dt = str(idx_date.date())
-                ind_sma5 = int(df_indicator.at[dt, "SMA5"])
-                ind_sma75 = int(df_indicator.at[dt, "SMA75"])
-                ind_close = df_indicator.at[dt, "close"]
+
+                ind_sma5 = int(df_indicator.loc[dt, "SMA5"])
+                ind_sma75 = int(df_indicator.loc[dt, "SMA75"])
+                ind_close = int(df_indicator.loc[dt, "close"])
             except:
                 print(str(idx_date.date()),'指標移動平均値取得エラー')
                 ind_sma5 = ind_presma5
@@ -517,7 +516,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         #----------------------
         if jdg_brk == True:
             dfbreak = bkdf.rename(columns={'Index': 'datetime'})
-            if tc_break.jdg_break_out2(sb_mode, dfbreak, Prm.breakout, Prm.break_offset, i_close) == 0:
+#            if tc_break.jdg_break_out2(sb_mode, dfbreak, Prm.breakout, Prm.break_offset, i_close) == 0:
+            if tc_break.jdg_break_out(sb_mode, dfbreak, Prm.breakout, Prm.break_offset, i_close) == 0:
                 continue
         #----------------------
         # 髭判定

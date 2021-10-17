@@ -92,7 +92,6 @@ def search_proper_rsi(df, low_per):
             get_rsi = row[0]
             break
 
-    print("RSI=", get_rsi)
     return get_rsi
 
 

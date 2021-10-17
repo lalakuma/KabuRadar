@@ -8,6 +8,7 @@ import KabukomApi.kabusapi_token as token
 import KabukomApi.kabusapi_board as board
 import KabukomApi.kabusapi_unregisterall as unregiall
 import sqlight as db
+import getConfig as conf
 
 #--------------------------------------
 # DBから全銘柄コードを取得
@@ -20,8 +21,10 @@ codes = db.read_code_all(cursor, "tbl_codelist")
 #--------------------------------------
 # KabukomApiで価格情報を取得
 #--------------------------------------
+# パスワード取得
+apipasswd = conf.get_config(conf.CONF_SEC_KABUSAPI, conf.CONF_KEY_API_PASSWD)
 # APIにてトークン取得
-tkn = token.getToken('morino12345')
+tkn = token.getToken(apipasswd)
 
 for code in codes:
     # 登録銘柄全削除（レジスト数エラー対策）
@@ -41,12 +44,12 @@ for code in codes:
         lst_price += [str(content["CurrentPrice"])]      
         lst_price += [str(content["CalcPrice"])]      
         lst_price += [str(content["TradingVolume"])]      
+        print(lst_price)
 
         # 個別株価情報テーブルを作成
         db.create_nametbl(conn, cursor, code)
         # 株価情報をデータベースに保存
         db.marge_price_1record(conn, cursor, "tbl_" + code, lst_price)     # マージ
-        print()
         # API実行回数エラーにならないようにスリープを入れる
 #        time.sleep(100/1000)    
 

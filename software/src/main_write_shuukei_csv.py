@@ -144,8 +144,8 @@ def decide_trade(DirPath):
     return df_con, lst_data
     
 
-def shuukei_makeExl(shuukei_path):
-    fileShukei = "集計.xlsx"
+def shuukei_makeExl(shuukei_path, stance):
+    fileShukei = "集計_" + stance + ".xlsx"
     # トレード決定処理
     df_con, lst_data = decide_trade(shuukei_path)
     if len(lst_data) == 0:

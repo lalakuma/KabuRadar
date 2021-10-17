@@ -5,12 +5,10 @@ import main_write_shuukei_csv as shuukei
 import getPeriodKabu as pkabu
 import pandas as pd
 import getConfig as conf
-#import main_kabustation_trade as kabust
-import pathlib
-import shutil
 import os
 import glob
 import logging
+import sys
 ############################################
 # 結果をCSVファイルに書き込む
 ############################################
@@ -26,6 +24,17 @@ def write_csv(dt, kekka_path):
                     
         dt.outdf.to_csv(kekka_path + "/code" + str(code) + wlstr + ".csv", encoding="shift_jis")    
 
+pd.set_option('display.max_columns', 20)
+
+#----------------------------------------
+# 起動引数取得
+#----------------------------------------
+# バッチファイルから渡された引数を格納したリストの取得
+argvs = sys.argv
+if len(argvs) > 1:
+    stance = argvs[1]
+else:
+    stance = 'NONE'
 #----------------------------------------
 # LOG設定
 #----------------------------------------
@@ -34,7 +43,15 @@ flh = logging.FileHandler('../../output/log/debug.log')
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO,
                     handlers=[sth, flh])
 logger = logging.getLogger(__name__)
-logger.info("処理 main_analyze_all を開始します。")
+
+if stance == 'HI':
+    str_stance = '高勝率モードで'
+elif stance == 'LO':
+    str_stance = '低勝率高回転モードで'
+else:
+    str_stance = '引数なしで'
+
+logger.info("処理 main_analyze_all を" + str_stance + "開始します。")
 
 #----------------------------------------
 # DBより解析対象銘柄を全て取得
@@ -47,11 +64,6 @@ codes = db.read_code_all(cursor, "tbl_codelist")
 #----------------------------------------
 # 設定ファイルより解析期間を取得
 #----------------------------------------
-#PAST_PERIOD=(-4279)     # (最古)過去4279日間のデータを検証 (2010年1月4日開始) これ以前はnullの混ざる銘柄が多い
-#PAST_PERIOD=(-4600)     # (最古)過去4600日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
-#PAST_PERIOD=(-360)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
-#PAST_PERIOD=(-170)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
-#PAST_PERIOD=(-15)     # 過去1000日間のデータを検証 (MAX4700[2021/08/26現在] 2009年1月5日開始)
 scrsec = conf.CONF_SEC_SCR
 PAST_PERIOD = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_PAST_PERIOD)) * (-1)
 
@@ -59,6 +71,7 @@ PAST_PERIOD = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_PAST_PERIOD)) * (-1)
 # メイン処理
 #----------------------------------------
 for offset in range(1):
+    # 各パラメータをセットする
     cls_dt = bktst.KabInf(sell_period = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SELL_PERIOD)),
                             breakout = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_BREAK_PERIOD)),
                             break_offset = float(conf.get_config(scrsec, conf.CONF_KEY_SCR_BREAK_OFSET)), 
@@ -77,79 +90,80 @@ for offset in range(1):
     # 結果保存用のパスを取得
     if exec_mode == 1:  # 本番モードの時
         kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_HONBAN)
-        if os.path.exists(kekka_path):     # ディレクトリがない場合
-            # 全てのCSVファイルを削除
-            for filename in  glob.glob(kekka_path + '*.csv'):
-                os.remove(filename)
-            # 集計ファイルを削除
-            if os.path.exists(kekka_path + '集計.xlsx'):
-                os.remove(kekka_path + '集計.xlsx')
-
     else:               # テストモードの時
         kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_SHUUKEI)
         kekka_path = kekka_path + str(offset) + "\\" #フォルダ名    
 
+    if os.path.exists(kekka_path):     # ディレクトリがない場合
+        # 全てのCSVファイルを削除
+        for filename in  glob.glob(kekka_path + '*.csv'):
+            os.remove(filename)
+        # 集計ファイルを削除
+        if (stance == 'NONE') and (os.path.exists(kekka_path + '集計_NONE.xlsx')):
+            os.remove(kekka_path + '集計_NONE.xlsx')
+        if (stance == 'HI') and (os.path.exists(kekka_path + '集計_HI.xlsx')):
+            os.remove(kekka_path + '集計_HI.xlsx')
+        if (stance == 'LO') and (os.path.exists(kekka_path + '集計_LO.xlsx')):
+            os.remove(kekka_path + '集計_LO.xlsx')
+
     cls_dt.write_prm_tocsv(kekka_path)      # パラメータをCSVに保存
-    testmode = 0    # 単発テストモード 1:有効、0:無効
+    one_shot = 0    # 単発処理モード 0:無効、0以外:単発処理する銘柄コードを設定する
 
     CD_NIKKEI = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_IND_CODE))
     ind_code = CD_NIKKEI
     ENA_IND = conf.get_config(scrsec, conf.CONF_KEY_JDG_IND)
     df_indicator = pd.DataFrame()
     # 指標が有効な場合
-    if ENA_IND == True:
+    if ENA_IND == '1':
         # 指標株価を取得する
-        df_nikkei = pkabu.getPeriodKabuData(ind_code, PAST_PERIOD, conn, cursor)
-        # 対象銘柄に対するインデックス銘柄を設定する（今は日経225ETF）
-        df_indicator = df_nikkei
+        df_indicator = pkabu.getPeriodKabuData(ind_code, PAST_PERIOD, conn, cursor)
 
     # 設定テーブル 全データ取得
     df_set = db.read_rec_all(conn, cursor, "tbl_code_set")
     df_set = df_set.set_index('code')
 
+    # =====================================================
+    # メインループ処理
+    # =====================================================
     # 銘柄コードリストに登録されている全コードに対して処理を行う
     for code in codes:
+        print("CODE=", code)
+
         #codeが無効に設定されている場合は処理しない
         code_ena = df_set.at[str(code), 'Enable']
         if code_ena == 0:
             continue
 
         # 売りシグナル = 0：保持期間なし(5日移動平均以下まで)、1～4：数値が指定保持期間、5：保持期間も移動平均もなしでMACDクロスで判定
-        #-----------------------
-        # バックテストの実行
-        #-----------------------
-        if testmode == 1:
-            ### 単発テスト用 ↓↓↓↓ STA ################################################
-            code = 1332
-            result = bktst.backtst_proc()              # 髭判定
-            if result == -1:
-                continue
-            else:
-                # CSVに出力
-                write_csv(cls_dt, offset, kekka_path)
-                break
-            ### 単発テスト用 ↑↑↑↑ END ################################################
-        else:
-            result = bktst.backtst_proc(code,
-                    df_indicator,
-                    cls_dt, 
-                    req_sb_mode = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SELLBUY)),  # 売買モード
-                    jdg_candle = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_CAND)),      # ローソク足判定
-                    jdg_ind = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_IND)),          # 指標銘柄判定
-                    jdg_mov = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV)),          # 移動平均線判定
-                    jdg_rsi = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSI)),          # RSI判定
-                    jdg_macd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MACD)),        # MACD判定
-                    jdg_brk = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BRK)),          # ブレイク判定
-                    jdg_berd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BERD)))        # 髭判定
-            if result == -1:
-                continue
+
+        # 単発処理が有効な場合はコードを設定する
+        if one_shot != 0:
+            code = one_shot
+
+        result = bktst.backtst_proc(code,
+                df_indicator,
+                cls_dt, 
+                req_sb_mode = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SELLBUY)),  # 売買モード
+                jdg_candle = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_CAND)),      # ローソク足判定
+                jdg_ind = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_IND)),          # 指標銘柄判定
+                jdg_mov = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV)),          # 移動平均線判定
+                jdg_rsi = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSI)),          # RSI判定
+                jdg_macd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MACD)),        # MACD判定
+                jdg_brk = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BRK)),          # ブレイク判定
+                jdg_berd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BERD)))        # 髭判定
+        if result == -1:
+            continue
 
         # CSVに出力
         write_csv(cls_dt, kekka_path)
 
+        # 単発処理が有効な場合は1回でループを抜ける
+        if one_shot != 0:
+            break
+
     # 集計処理
     shuukei.shuukei_toCsv(kekka_path)
-    lst_shuukei = shuukei.shuukei_makeExl(kekka_path)
+    lst_shuukei = shuukei.shuukei_makeExl(kekka_path, stance)
 
 # DBクローズ
 db.close_db(conn)
