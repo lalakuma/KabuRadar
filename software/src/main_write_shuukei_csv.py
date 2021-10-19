@@ -48,7 +48,7 @@ def decide_trade(DirPath):
     
     if len(list_) == 0:
         print("集計対象ファイルが見つかりません")
-        return
+        return df, list_
     # 結合
     df_con = pd.concat(list_, join='inner') # joinをinnerに指定
     # NaNのある行を削除

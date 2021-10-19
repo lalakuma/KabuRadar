@@ -12,7 +12,7 @@ import sqlight as db
 # 関数：株探サイトから銘柄情報を取得する
 ####################################################################
 def get_brand(code):
-    url='https://kabutan.jp/stock/?code={}'.format(code)
+    url='https://kabutan.jp/stock/?code={:04}'.format(code)
     q=PyQuery(url)
     
     if len(q.find('span.market'))==0:

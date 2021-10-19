@@ -3,6 +3,11 @@
 #   取得した株価をデータベースに登録する
 # 　但し、既にテーブルが存在する場合は差し替える 
 ####################################################
+#日経225：'^N225'
+#ダウ：'^DJI'
+#SP500：'^GSPC'
+#ナスダック総合指数：'^IXIC'
+
 import sys
 import pandas as pd
 from yahoo_finance_api2 import share
@@ -10,7 +15,13 @@ from yahoo_finance_api2.exceptions import YahooFinanceError
 import datetime 
 
 def get_pricedata(code, ptype, peri, freq):
-    my_share = share.Share(code + '.T')
+    if code == '0':
+        my_share = share.Share('^N225')
+    elif code == '800':
+        my_share = share.Share('^DJI')
+    else:
+        my_share = share.Share(code + '.T')
+
     symbol_data = None
     
     if ptype == "year":
