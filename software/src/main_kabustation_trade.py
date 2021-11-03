@@ -12,6 +12,7 @@ import datetime
 import time
 import line
 import logging
+import sys
  
 ##############################################
 # カブコムAPIで新規購入
@@ -63,6 +64,19 @@ def kabukom_entry(lst_data, logger):
 ###########################
 # メイン
 ###########################
+#----------------------------------------
+# 起動引数取得
+#----------------------------------------
+# バッチファイルから渡された引数を格納したリストの取得
+argvs = sys.argv
+if len(argvs) > 1:
+    stance = argvs[1]
+else:
+    stance = 'NONE'
+
+#----------------------------------------
+# パラメータ取得
+#----------------------------------------
 kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_HONBAN)
 df, lst_shuukei = shuukei.decide_trade(kekka_path)
 
@@ -105,7 +119,7 @@ if iWeek != 6 and iWeek != 7:            #土日以外
         if trd["mark"] == "新買" or trd["mark"] == "新売":
             lst_linenoti.append("[" + str(trd["code"]) + "]" + trd["mark"] + " PF:" + str(trd["PF"]) + " ¥{:,d}".format(trd["close"]))
 
-#    line.line_notify(lst_linenoti)
+    line.line_notify(lst_linenoti, stance)
 
     #----------------------------------------
     # 指定の時間帯であれば取引を実行する

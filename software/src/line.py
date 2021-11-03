@@ -4,7 +4,7 @@ import requests
 from datetime import datetime
 import locale
 
-def line_notify(lst_codes):
+def line_notify(lst_codes, stance):
 
     # 土曜日と日曜日は通知処理を行わない
     iWeek = datetime.today().isoweekday()
@@ -25,5 +25,5 @@ def line_notify(lst_codes):
         message = "not found"
 
     # LINEに通知する
-    payload = {"message" :  message} 
+    payload = {"message" :  stance + " " + message} 
     r = requests.post(url, headers = headers, params=payload) 

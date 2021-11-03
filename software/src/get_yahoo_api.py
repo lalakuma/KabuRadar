@@ -21,7 +21,6 @@ def get_pricedata(code, ptype, peri, freq):
         my_share = share.Share('^DJI')
     else:
         my_share = share.Share(code + '.T')
-
     symbol_data = None
     
     if ptype == "year":
@@ -31,9 +30,7 @@ def get_pricedata(code, ptype, peri, freq):
 
 
     try:
-        symbol_data = my_share.get_historical(
-            peri_type, peri,
-            share.FREQUENCY_TYPE_DAY, freq)
+        symbol_data = my_share.get_historical(peri_type, peri, share.FREQUENCY_TYPE_DAY, freq)
         
     except YahooFinanceError as e:
         print(e.message)

@@ -219,7 +219,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         # 日付取得
         #----------------------
         idx_date = row[0]
-#        if str(datetime.date(idx_date)) == '2021-10-14':
+#        if str(datetime.date(idx_date)) == '2021-10-29':
 #            a = 1
         #----------------------
         # 最新のMACDとシグナルの値を取得

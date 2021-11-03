@@ -163,7 +163,7 @@ for offset in range(1):
 
     # 集計処理
     shuukei.shuukei_toCsv(kekka_path)
-    lst_shuukei = shuukei.shuukei_makeExl(kekka_path, stance)
+    lst_shuukei, filepath = shuukei.shuukei_makeExl(kekka_path, stance)
 
 # DBクローズ
 db.close_db(conn)

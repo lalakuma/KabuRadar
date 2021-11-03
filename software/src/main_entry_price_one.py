@@ -6,6 +6,17 @@
 import sqlight as db
 import get_yahoo_api as yahoo
 import time
+import logging
+
+#----------------------------------------
+# LOG設定
+#----------------------------------------
+sth = logging.StreamHandler()
+flh = logging.FileHandler('../../output/log/debug.log')
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO,
+                    handlers=[sth, flh])
+logger = logging.getLogger(__name__)
+logger.info("処理 main_entry_price_one を開始します。")
 
 # DBに接続
 conn, cursor = db.connect_db()

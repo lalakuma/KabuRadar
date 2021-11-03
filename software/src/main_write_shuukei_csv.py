@@ -10,13 +10,11 @@ import sqlight as db
 from openpyxl.styles import Font, PatternFill
 from openpyxl.formatting.rule import CellIsRule, FormulaRule
 import getConfig as conf
+import win32com.client as win32
+import os
+win32c = win32.constants
 #################################################################
 # トレード銘柄決定処理
-# 引数：mode        (MODE_BUY=買い、MODE_SELL=売り)
-#     : dfrsi       データフレーム
-#     : period      期間
-# 戻り値：True=買いの時に2σを超えている/売りの時に-2σを超えている
-#       ：False=買いの時に2σを超えていない/売りの時に-2σを超えていない
 #################################################################
 def decide_trade(DirPath):
     # DBに接続
@@ -144,6 +142,9 @@ def decide_trade(DirPath):
     return df_con, lst_data
     
 
+#################################################################
+# 集計ファイル作成
+#################################################################
 def shuukei_makeExl(shuukei_path, stance):
     fileShukei = "集計_" + stance + ".xlsx"
     # トレード決定処理
@@ -152,16 +153,17 @@ def shuukei_makeExl(shuukei_path, stance):
         print("集計対象ファイルがありません。")
         return
 
+    filepath = shuukei_path + fileShukei
     # エクセルに書き込み
-    df_con.to_excel(shuukei_path + fileShukei, sheet_name='全コード結合', encoding="shift_jis")
+    df_con.to_excel(filepath, sheet_name='全コード結合', encoding="shift_jis")
 
     dfreal = pd.DataFrame(lst_data)    
-    with pd.ExcelWriter(shuukei_path + fileShukei, engine="openpyxl", mode="a") as writer:
+    with pd.ExcelWriter(filepath, engine="openpyxl", mode="a") as writer:
         dfreal.to_excel(writer, sheet_name='1日10000以下', index=False)
 
     # エクセルファイルの先頭行にフィルターをつける
     if(len(df_con) > 0):
-        wb= px.load_workbook(shuukei_path + fileShukei)
+        wb= px.load_workbook(filepath)
         ws = wb.active
         ws.column_dimensions['B'].width =22
         ws.column_dimensions['F'].width =10
@@ -179,11 +181,17 @@ def shuukei_makeExl(shuukei_path, stance):
         ws1.column_dimensions['F'].width =10
         ws1.auto_filter.ref = ws1.dimensions
         ws1['B1'] = 'date'
-        for row, cellObj in enumerate(list(ws1.columns)[8]): # セル(K列)に累積計算関数を書き込む
+        for row, cellObj in enumerate(list(ws1.columns)[8]): # セル(I列)に累積計算関数を書き込む
             if row == 0:
                 continue
             n = '=IF(ISNUMBER(I' + str(row) + '),I' + str(row) + '+G' + str(row+1) + '+H' + str(row+1) + ',0)'
             cellObj.value = n
+
+            ws1.cell(row+1,column=10).value = '=YEAR(B' + str(row+1) + ')'
+            ws1.cell(row+1,column=11).value = '=MONTH(B' + str(row+1) + ')'
+
+        ws1.cell(row=1,column=10).value = '年'
+        ws1.cell(row=1,column=11).value = '月'
 
         # セルの色を設定
         fmtarea = 'F2:F' + str(row + 1)
@@ -194,9 +202,9 @@ def shuukei_makeExl(shuukei_path, stance):
         ws1.conditional_formatting.add(fmtarea, formula_rule2)
 
     if(len(df_con) > 0):
-        wb.save(shuukei_path + fileShukei)
+        wb.save(filepath)
     
-    return lst_data
+    return lst_data, filepath
 
 
 def shuukei_toCsv(shuukei_path):
@@ -254,6 +262,47 @@ def shuukei_toCsv(shuukei_path):
 
         strpath = shuukei_path + strpfall + "_" + "W" + str(cnt_win) + "L" + str(cnt_lose) + "_" + strWinPer + "_" + strincome + ".csv"
         df.to_csv(strpath, encoding="shift_jis")    
-    
+
+#################################################################
+# ピボットテーブル作成
+# 引数：skfilepath　集計ファイルのパス
+# 戻り値：なし
+#################################################################
+def create_pivottable(skfilepath):
+    excel = win32.gencache.EnsureDispatch('Excel.Application')
+    excel.Visible = True  
+
+    ## 読み込み時に絶対パスを指定しなければエラーになる
+    fpath = os.path.join(os.getcwd(),skfilepath)
+    wb = excel.Workbooks.Open(fpath)
+
+    ## Sheet 1 指定し､フィルターを有効にする
+    wbs1 = wb.Sheets('1日10000以下')
+
+    ## ピボットテーブルの作成
+    wbs2_name = 'pivot'
+    wb.Sheets.Add().Name = wbs2_name
+    wbs2 = wb.Sheets(wbs2_name)
+    pvt_name = 'pvt'
+    pc = wb.PivotCaches().Create(SourceType=win32c.xlDatabase, SourceData=wbs1.UsedRange)
+    pc.CreatePivotTable(TableDestination='{sheet}!R3C1'.format(sheet=wbs2_name), TableName=pvt_name)
+
+    ## ピボットテーブルの設定
+    wbs2.PivotTables(pvt_name).PivotFields('年').Orientation = win32c.xlRowField
+    wbs2.PivotTables(pvt_name).PivotFields('月').Orientation = win32c.xlColumnField
+    wbs2.PivotTables(pvt_name).PivotFields('buygain').Orientation = win32c.xlDataField
+
+    wbs2.Cells(4, 1).Select()
+
+    ## ファイルを閉じる
+    wb.Close(True)
+    excel.Quit()
+
 #shuukei_toCsv(0)
-#shuukei_makeExl(0)
+#sklst, skfilepath = shuukei_makeExl('..\\..\\output\\honban\\', 'TST')
+#create_pivottable(skfilepath)
+
+
+
+
+

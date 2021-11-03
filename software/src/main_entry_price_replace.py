@@ -7,6 +7,7 @@ import sqlight as db
 import get_yahoo_api as yahoo
 from enum import Enum
 from datetime import datetime, date, timedelta
+import time
 
 # DBに接続
 conn, cursor = db.connect_db()
@@ -40,6 +41,8 @@ for code in codes:
             db.add_df_records(conn, code, df_daily)
 
     print(code)
+    time.sleep(50/1000)
+
 
 # DBクローズ
 db.close_db(conn)
