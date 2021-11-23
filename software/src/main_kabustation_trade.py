@@ -24,19 +24,35 @@ def kabukom_entry(lst_data, logger):
     # APIにてトークン取得
     tkn = token.getToken(apipasswd)
 
+    # 信用余力を取得
+    mgn = margin.get_margin(tkn["Token"])
+    mymgn = int(mgn["MarginAccountWallet"])
+
+    # 1株あたりの最低価格判定ライン(この金額以下の銘柄は複数(100株単位)購入する)を設定
+    # 資金に余裕がでてきたらここを増やす。リスクと利益がUP
+    low_lmt_price = 400000
+    if mymgn <= low_lmt_price:
+        low_lmt_price = mymgn
+
     for tdy in lst_data:
         # 新規買い対象のみ処理する。それ以外は処理しない。
         mark = tdy["mark"]
+        close = tdy["close"]
+        num = 1
+        close_price = close * 100   # 一口価格
+        if close_price < low_lmt_price:
+            num = int(low_lmt_price / close_price)
+
         if "新買" in mark:
             side = "2"
             chMgn = 2
             DlvType = 0
-            qty = 100       # 注文数量。今は100固定だけどそのうち株価によって調整する。
+            qty = 100 * num       # 注文数量。今は100固定だけどそのうち株価によって調整する。
         elif "新売" in mark:
             side = "1"
             chMgn = 2
             DlvType = 0
-            qty = 100       # 注文数量。今は100固定だけどそのうち株価によって調整する。
+            qty = 100 * num       # 注文数量。今は100固定だけどそのうち株価によって調整する。
         else:
             continue 
 

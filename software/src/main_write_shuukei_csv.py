@@ -9,7 +9,6 @@ import getConfig
 import sqlight as db
 from openpyxl.styles import Font, PatternFill
 from openpyxl.formatting.rule import CellIsRule, FormulaRule
-#from pycel.excelcompiler import ExcelCompiler
 import getConfig as conf
 import win32com.client as win32
 import os
@@ -142,15 +141,6 @@ def decide_trade(DirPath):
             break
     return df_con, lst_data
     
-
-# def get_value( ec, sheet, address):
-    cell = sheet[address]
-
-    # 数式なら計算した結果を返す
-    if cell.data_type == 'f':
-        return ec.evaluate('{}!{}'.format(sheet.title, address))
-
-    return cell.value
 #################################################################
 # 集計ファイル作成
 #################################################################
@@ -215,18 +205,6 @@ def shuukei_makeExl(shuukei_path, stance):
     
     # 最終利益を集計ファイルより取得
     
-#    wb_dtonly= px.load_workbook(filepath, data_only=True)
-#    ws1_dtonly = wb_dtonly.active
-#    ws1_dtonly = wb_dtonly.worksheets[1]
-#    maxrow = ws1_dtonly.max_row
-#    finalRieki = ws1_dtonly.cell(row=maxrow,column=9).value
-#    wb_dtonly.save(filepath)
-
-#    wb_dtonly= px.load_workbook(filepath, data_only=False)
-#    ec = ExcelCompiler(filepath)
-#    ws1_dtonly = wb_dtonly.worksheets[1]
-#    maxrow = ws1_dtonly.max_row
-#    finalRieki = get_value(ec, ws1_dtonly, 'I' + str(maxrow))
     finalRieki=0
 
     return lst_data, filepath, finalRieki
@@ -325,9 +303,9 @@ def create_pivottable(skfilepath):
     wb.Close(True)
     excel.Quit()
 
-shuukei_toCsv('..\\..\\output\\honban\\')
-sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST1')
-create_pivottable(skfilepath)
+#shuukei_toCsv('..\\..\\output\\honban\\')
+#sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST')
+#create_pivottable(skfilepath)
 
 
 
