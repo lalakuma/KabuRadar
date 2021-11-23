@@ -39,7 +39,7 @@ def entry_codelist():
     #--------------------------------------
     # エクセルから銘柄コードを読み込む
     #--------------------------------------
-    df = pd.read_excel('../Input/XLS/銘柄コード.xlsx',index_col=0)
+    df = pd.read_excel('../../Input/XLS/銘柄コード.xlsx',index_col=0)
     print(df)
 
     # DBに接続
@@ -63,13 +63,13 @@ def entry_codelist():
             db.marge_codelist_1record(conn, cursor, "tbl_codelist", brand) 
 
         # コード設定テーブルに指定コードが既にDBに存在するかチェックする
-        exi = db.exist_data(cursor, 'tbl_code_set', 'Code', str(code))
+        exi = db.exist_data(cursor, 'tbl_code_set', 'code', str(code))
         # 未登録の場合に処理を行う
         if exi == False:
             # コードと有効設定を登録（登録時は無効。後で有益性をチェックしてから有効にする為）
-            df_ena = pd.DataFrame(columns=['Code', 'Enable', 'PF'])
-            df_ena = df_ena.append({'Code': code, 'Enable': '1', 'PF': '0'}, ignore_index=True)
-            df_ena = df_ena.set_index('Code')
+            df_ena = pd.DataFrame(columns=['code', 'Enable', 'PF'])
+            df_ena = df_ena.append({'code': code, 'Enable': '1', 'PF': '0'}, ignore_index=True)
+            df_ena = df_ena.set_index('code')
             # DBに1レコード追加
             db.add_settbl_record(conn, df_ena) 
 

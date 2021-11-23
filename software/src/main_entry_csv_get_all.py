@@ -19,7 +19,7 @@ def csv_get_all():
     codes = db.read_code_all(cursor, "tbl_codelist")
 
     # entryフォルダからcsvファイルのリストを作成
-    files = glob.glob("../Input/CSV/entry/*.csv")
+    files = glob.glob("../../Input/CSV/entry/*.csv")
 
     # 検出したファイル数分繰り返す
     for file in files:
@@ -29,7 +29,7 @@ def csv_get_all():
         print(csv_code)
 
         # CSVファイル読み込み
-        csv_input = pd.read_csv(filepath_or_buffer="..\Input\CSV\entry\TimeChart" + csv_code + ".csv", encoding="ms932", sep=",")
+        csv_input = pd.read_csv(filepath_or_buffer="..\..\Input\CSV\entry\TimeChart" + csv_code + ".csv", encoding="ms932", sep=",")
 
         # 必要な項目をリストに追加
         lst_price = []
@@ -60,7 +60,7 @@ def csv_get_all():
         db.add_records(conn, csv_code, lst_price)
 
         # 登録の終わったcsvファイルを完了フォルダに移動する
-        shutil.move(file, '../CSV/comp/')
+        shutil.move(file, '../../Input/CSV/comp/')
 
     # DBクローズ
     db.close_db(conn)

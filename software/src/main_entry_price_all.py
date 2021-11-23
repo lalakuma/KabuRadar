@@ -12,7 +12,7 @@ class Order(Enum):
     RAPLACE = 0     # 重複時は全て差し替え
     APPEND  = 1     # 新規の追加のみ（重複時は処理なし）
 
-proc_order = Order.RAPLACE
+proc_order = Order.APPEND
 
 # DBに接続
 conn, cursor = db.connect_db()
@@ -20,7 +20,7 @@ conn, cursor = db.connect_db()
 codes = db.read_code_all(cursor, "tbl_codelist")
 
 ptype = "year"
-period = 15     # 期間(年)
+period = 5     # 期間(年)
 frequency = 1   # 日足
 
 # 現在DBに登録されている全テーブルリストを取得

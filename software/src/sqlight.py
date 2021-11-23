@@ -31,7 +31,7 @@ def create_codelisttbl(conn, cursor):
     ・カラム型は指定しなくても特には問題ない
     　　※NULL, INTEGER(整数), REAL(浮動小数点), TEXT(文字列), BLOB(バイナリ)の5種類
     """
-    sql = 'create table if not exists tbl_codelist(Code text PRIMARY KEY, Name text NOT NULL, Sijou text, Sangyou text)'
+    sql = 'create table if not exists tbl_codelist(code text PRIMARY KEY, Name text NOT NULL, Sijou text, Sangyou text)'
     cursor.execute(sql)#executeコマンドでSQL文を実行
     
     conn.commit()
@@ -41,7 +41,7 @@ def create_codelisttbl(conn, cursor):
 #   (既に存在する場合は作成しない)
 ##########################################################################
 def create_codesettbl(conn, cursor):
-    sql = 'create table if not exists tbl_code_set(Code text PRIMARY KEY, PF real, Enable integer)'
+    sql = 'create table if not exists tbl_code_set(code text PRIMARY KEY, PF real, Enable integer)'
     cursor.execute(sql)#executeコマンドでSQL文を実行
     
     conn.commit()
@@ -158,10 +158,13 @@ def update_codeset(conn, cursor, tbl, df):
 #   マージ (codelist)
 ##########################################################################
 def marge_codelist_1record(conn, cursor, tbl, data):
+    if data is None:
+        return
+
     sql = 'INSERT INTO ' + tbl + \
     ' VALUES("' + str(data[0]) + '","' + data[1] + '","' + data[2] + '","' + data[3] + '")' + \
-    ' on conflict (Code) DO UPDATE SET' + \
-    ' Code="' + str(data[0]) + '"' + \
+    ' on conflict (code) DO UPDATE SET' + \
+    ' code="' + str(data[0]) + '"' + \
     ',Name="' + data[1] + '"' + \
     ',Sijou="' + data[2] + '"' + \
     ',Sangyou="' + data[3] + '"' + ';'

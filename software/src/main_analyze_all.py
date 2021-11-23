@@ -94,7 +94,7 @@ for offset in range(1):
         kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_SHUUKEI)
         kekka_path = kekka_path + str(offset) + "\\" #フォルダ名    
 
-    if os.path.exists(kekka_path):     # ディレクトリがない場合
+    if os.path.exists(kekka_path):     # ディレクトリがある場合
         # 全てのCSVファイルを削除
         for filename in  glob.glob(kekka_path + '*.csv'):
             os.remove(filename)
@@ -107,6 +107,7 @@ for offset in range(1):
             os.remove(kekka_path + '集計_LO.xlsx')
 
     cls_dt.write_prm_tocsv(kekka_path)      # パラメータをCSVに保存
+    conf.copy_confFile(kekka_path)          # 設定ファイルを結果フォルダにコピー（どの設定ファイルで実行したかを残す為）
     one_shot = 0    # 単発処理モード 0:無効、0以外:単発処理する銘柄コードを設定する
 
     CD_NIKKEI = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_IND_CODE))
@@ -116,12 +117,11 @@ for offset in range(1):
     # 指標が有効な場合
     if ENA_IND == '1':
         # 指標株価を取得する
-        df_indicator = pkabu.getPeriodKabuData(ind_code, PAST_PERIOD, conn, cursor)
+        df_indicator = pkabu.getPeriodKabuData(ind_code, PAST_PERIOD - 75, conn, cursor)
 
     # 設定テーブル 全データ取得
     df_set = db.read_rec_all(conn, cursor, "tbl_code_set")
     df_set = df_set.set_index('code')
-
     # =====================================================
     # メインループ処理
     # =====================================================
@@ -162,8 +162,13 @@ for offset in range(1):
             break
 
     # 集計処理
-    shuukei.shuukei_toCsv(kekka_path)
-    lst_shuukei, filepath = shuukei.shuukei_makeExl(kekka_path, stance)
+    fullpath_shuukei = shuukei.shuukei_toCsv(kekka_path)
+    lst_shuukei, filepath, finalRieki = shuukei.shuukei_makeExl(kekka_path, stance)
+    shuukei.create_pivottable(filepath)
+    
+    # ファイル名に最終利益追加
+    newfilename = fullpath_shuukei.replace('PF', 'Y' + str(finalRieki) + '_PF')
+    os.rename(fullpath_shuukei, newfilename)
 
 # DBクローズ
 db.close_db(conn)

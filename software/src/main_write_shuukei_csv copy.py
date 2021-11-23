@@ -9,7 +9,7 @@ import getConfig
 import sqlight as db
 from openpyxl.styles import Font, PatternFill
 from openpyxl.formatting.rule import CellIsRule, FormulaRule
-#from pycel.excelcompiler import ExcelCompiler
+from pycel.excelcompiler import ExcelCompiler
 import getConfig as conf
 import win32com.client as win32
 import os
@@ -94,7 +94,7 @@ def decide_trade(DirPath):
                 wktotal += dic_row["close"]                # 一時トータルに終値加算
 
                 # トータル10000(買値が100万円)以内なら購入対象として追加
-                if wktotal < 15000:                     # 一時トータルで比較
+                if wktotal < 10000:                     # 一時トータルで比較
 #                if wktotal < 5000:                     # 一時トータルで比較
                     lst_tdyBuy.append(dic_row["code"])  # 当日購入リストにコードを追加
                     lst_data.append(dic_row)            # データリストに追加
@@ -143,7 +143,7 @@ def decide_trade(DirPath):
     return df_con, lst_data
     
 
-# def get_value( ec, sheet, address):
+def get_value( ec, sheet, address):
     cell = sheet[address]
 
     # 数式なら計算した結果を返す
@@ -214,20 +214,19 @@ def shuukei_makeExl(shuukei_path, stance):
         wb.save(filepath)
     
     # 最終利益を集計ファイルより取得
-    
-#    wb_dtonly= px.load_workbook(filepath, data_only=True)
-#    ws1_dtonly = wb_dtonly.active
-#    ws1_dtonly = wb_dtonly.worksheets[1]
-#    maxrow = ws1_dtonly.max_row
-#    finalRieki = ws1_dtonly.cell(row=maxrow,column=9).value
-#    wb_dtonly.save(filepath)
+
+    wb_dtonly= px.load_workbook(filepath, data_only=True)
+    ws1_dtonly = wb_dtonly.worksheets[1]
+    maxrow = ws1_dtonly.max_row
+    finalRieki = ws1_dtonly.cell(row=maxrow,column=9).value
+    wb_dtonly.save(filepath)
 
 #    wb_dtonly= px.load_workbook(filepath, data_only=False)
 #    ec = ExcelCompiler(filepath)
 #    ws1_dtonly = wb_dtonly.worksheets[1]
 #    maxrow = ws1_dtonly.max_row
 #    finalRieki = get_value(ec, ws1_dtonly, 'I' + str(maxrow))
-    finalRieki=0
+#    finalRieki=0
 
     return lst_data, filepath, finalRieki
 
@@ -325,8 +324,8 @@ def create_pivottable(skfilepath):
     wb.Close(True)
     excel.Quit()
 
-shuukei_toCsv('..\\..\\output\\honban\\')
-sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST1')
+shuukei_toCsv('..\\..\\output\\analys\\0\\')
+sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\analys\\0\\', 'TST')
 create_pivottable(skfilepath)
 
 

@@ -242,6 +242,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         #----------------------
         # 指標銘柄判定
         #----------------------
+
         if jdg_ind == True:
             try:
                 dt = str(idx_date.date())
@@ -517,8 +518,8 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         #----------------------
         if jdg_brk == True:
             dfbreak = bkdf.rename(columns={'Index': 'datetime'})
-#            if tc_break.jdg_break_out2(sb_mode, dfbreak, Prm.breakout, Prm.break_offset, i_close) == 0:
-            if tc_break.jdg_break_out(sb_mode, dfbreak, Prm.breakout, Prm.break_offset, i_close) == 0:
+            if tc_break.jdg_break_out2(sb_mode, dfbreak, Prm.breakout, Prm.break_offset, i_close) == 0:
+#            if tc_break.jdg_break_out(sb_mode, dfbreak, Prm.breakout, Prm.break_offset, i_close) == 0:
                 continue
         #----------------------
         # 髭判定

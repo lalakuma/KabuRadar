@@ -2,8 +2,11 @@
 import configparser
 import os
 import errno
+import shutil
 
-config_ini_path = '../../Input/config/config_copy.ini'
+config_path = '../../Input/config/'
+hi_ini_file = 'config_HI.ini'
+lo_ini_file = 'config_LO.ini'
 
 # セクション名称定義
 CONF_SEC_SCR = 'SCREENING'
@@ -43,18 +46,31 @@ CONF_KEY_PATH_DB = 'PATH_DB'
 CONF_KEY_API_PASSWD = 'API_PASSWD'
 
 CONF_KEY_TRD_PASSWD = 'TRD_PASSWD'
+
+##############################################
+#   設定ファイルのフルパスを取得
+##############################################
+def get_confFilePath():
+    conf_file_path = ""
+    # 指定したiniファイルが存在しない場合、エラー発生
+    if os.path.exists(config_path + hi_ini_file):
+        conf_file_path = config_path + hi_ini_file
+    elif os.path.exists(config_path + lo_ini_file):
+        conf_file_path = config_path + lo_ini_file
+
+    return conf_file_path
 ##############################################
 #   CODE設定情報登録用のパスを取得
 ##############################################
 def get_config(section, key):
     # iniファイルの読み込み
     config_ini = configparser.ConfigParser()
-
-    # 指定したiniファイルが存在しない場合、エラー発生
-    if not os.path.exists(config_ini_path):
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), config_ini_path)
-
-    config_ini.read(config_ini_path, encoding='utf-8')
+    conf_file = get_confFilePath()
+    # iniファイルが存在しない場合、エラー発生
+    if conf_file != "":
+        config_ini.read(conf_file, encoding='utf-8')
+    else:
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), config_path)
 
     # [ENTRY]の「PATH_CODESET」キーの値を取得
     read_conf = config_ini[section]
@@ -63,6 +79,17 @@ def get_config(section, key):
     # 結果表示
     return path_pf
 
+##############################################
+#   パラメータファイルコピー処理
+#   destpath コピーファイルの保存先
+##############################################
+def copy_confFile(destpath):
+    conf_file = get_confFilePath()
+    # iniファイルが存在しない場合、エラー発生
+    if conf_file != "":
+        shutil.copy(conf_file, destpath)
+    else:
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), config_path)
 
 ##############################################
 #   CODE設定情報登録用のパスを取得
@@ -71,11 +98,12 @@ def get_codeset_path():
     # iniファイルの読み込み
     config_ini = configparser.ConfigParser()
 
-    # 指定したiniファイルが存在しない場合、エラー発生
-    if not os.path.exists(config_ini_path):
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), config_ini_path)
-
-    config_ini.read(config_ini_path, encoding='utf-8')
+    conf_file = get_confFilePath()
+    # iniファイルが存在しない場合、エラー発生
+    if conf_file != "":
+        config_ini.read(conf_file, encoding='utf-8')
+    else:
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), config_path)
 
     # [ENTRY]の「PATH_CODESET」キーの値を取得
     read_conf = config_ini['ENTRY']
@@ -91,11 +119,12 @@ def get_shuukei_path():
     # iniファイルの読み込み
     config_ini = configparser.ConfigParser()
 
-    # 指定したiniファイルが存在しない場合、エラー発生
-    if not os.path.exists(config_ini_path):
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), config_ini_path)
-
-    config_ini.read(config_ini_path, encoding='utf-8')
+    conf_file = get_confFilePath()
+    # iniファイルが存在しない場合、エラー発生
+    if conf_file != "":
+        config_ini.read(conf_file, encoding='utf-8')
+    else:
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), config_path)
 
     # [ULTRAMAN]の「Skil」キーの値を取得
     read_ultraman = config_ini['SHUUKEI']
@@ -105,17 +134,19 @@ def get_shuukei_path():
     return shuukei_path
 
 ##############################################
-#   集計ファイル作成用元データのパスを取得
+#   カブコムAPI用の設定を取得
 ##############################################
 def get_kabukomuApiConfig():
     # iniファイルの読み込み
     config_ini = configparser.ConfigParser()
 
-    # 指定したiniファイルが存在しない場合、エラー発生
-    if not os.path.exists(config_ini_path):
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), config_ini_path)
+    conf_file = get_confFilePath()
+    # iniファイルが存在しない場合、エラー発生
+    if conf_file != "":
+        config_ini.read(conf_file, encoding='utf-8')
+    else:
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), config_path)
 
-    config_ini.read(config_ini_path, encoding='utf-8')
     read_kabukomu = config_ini['KABUSAPI']
 
     # 結果表示
