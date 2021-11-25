@@ -242,7 +242,6 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         #----------------------
         # 指標銘柄判定
         #----------------------
-
         if jdg_ind == True:
             try:
                 dt = str(idx_date.date())
