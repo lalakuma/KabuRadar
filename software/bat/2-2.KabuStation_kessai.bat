@@ -11,19 +11,19 @@ rem ' kabuステーション起動
 rem '----------------------------------
 cd C:\Users\morino\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\kabu.com
 start kabuステーション.appref-ms
-timeout 30
+timeout 20
 
 rem 'Windows自動操作ツールを起動して株ステーションにログイン
 start C:\tool\uwsc5302\UWSC.exe C:\tool\uwsc5302\kabucom_login.uws
+timeout 30
 
 rem '----------------------------------
 rem ' 最新の株価を取得 (決済には関係ないけど15:00以降の終値を取得する為)
 rem '----------------------------------
 cd C:\MorinoFolder\Python\KabuRadar\software\src
 echo 株価取得
-timeout 60
 rem 'APIで最新の株価を取得してデータベースに保存
-call C:\MorinoFolder\Python\KabuRadar\software\src\main_entry_price_one.py
+call C:\MorinoFolder\Python\KabuRadar\software\src\main_entry_kabukom_price.py
 
 rem '*******************************************************
 rem ' 決済処理開始

@@ -14,22 +14,21 @@ start kabuステーション.appref-ms
 timeout 30
 
 rem 'Windows自動操作ツールを起動して株ステーションにログイン
-start C:\tool\uwsc5302\UWSC.exe C:\tool\uwsc5302\kabucom_login.uws
+call C:\tool\uwsc5302\UWSC.exe C:\tool\uwsc5302\kabucom_login.uws
+timeout 30
 
 rem '----------------------------------
 rem ' 最新の株価を取得
 rem '----------------------------------
 cd C:\MorinoFolder\Python\KabuRadar\software\src
-
+echo 株価取得
 rem 'APIで最新の株価を取得してデータベースに保存
-call C:\MorinoFolder\Python\KabuRadar\software\src\main_entry_price_one.py
+call C:\MorinoFolder\Python\KabuRadar\software\src\main_entry_kabukom_price.py
 
 rem '*******************************************************
 rem ' 購入処理開始
 rem '*******************************************************
 echo TRADE実行
-
-cd C:\MorinoFolder\Python\KabuRadar\software\src
 
 rem '----------------------------------
 rem ' スクリーニング1回目 高勝率検索

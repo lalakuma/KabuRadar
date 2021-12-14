@@ -181,7 +181,7 @@ def marge_price_1record(conn, cursor, tbl, data):
 
     sql = 'INSERT INTO ' + tbl + \
     ' VALUES("' + data[0] + '","' + data[1] + '","' + data[2] + '","' + data[3] + '","' + data[4] + '","' + data[5] + '")' + \
-    ' on conflict (Date) DO UPDATE SET' + \
+    ' on conflict (datetime) DO UPDATE SET' + \
     ' datetime="' + data[0] + '"' + \
     ',open="' + data[1] + '"' + \
     ',high="' + data[2] + '"' + \

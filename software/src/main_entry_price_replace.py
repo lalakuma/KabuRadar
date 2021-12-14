@@ -15,7 +15,7 @@ conn, cursor = db.connect_db()
 codes = db.read_code_all(cursor, "tbl_codelist")
 
 ptype = "day"
-period = 10     # 期間(日)
+period = 5      # 期間(日)
 frequency = 1   # 日足
 
 # 現在DBに登録されている全テーブルリストを取得

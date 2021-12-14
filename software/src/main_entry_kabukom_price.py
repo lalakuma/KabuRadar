@@ -9,6 +9,17 @@ import KabukomApi.kabusapi_board as board
 import KabukomApi.kabusapi_unregisterall as unregiall
 import sqlight as db
 import getConfig as conf
+import logging
+
+#----------------------------------------
+# LOG設定
+#----------------------------------------
+sth = logging.StreamHandler()
+flh = logging.FileHandler('../../output/log/debug.log')
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO,
+                    handlers=[sth, flh])
+logger = logging.getLogger(__name__)
+logger.info("処理 main_entry_kabukom_price を開始します。")
 
 #--------------------------------------
 # DBから全銘柄コードを取得
@@ -36,22 +47,27 @@ for code in codes:
     lst_price = []
     date = content["CurrentPriceTime"]
     if date != None:
-        lst_price += [date[0:10]]      
-        lst_price += [code]      
-        lst_price += [str(content["OpeningPrice"])]      
-        lst_price += [str(content["HighPrice"])]      
-        lst_price += [str(content["LowPrice"])]      
-        lst_price += [str(content["CurrentPrice"])]      
-        lst_price += [str(content["CalcPrice"])]      
-        lst_price += [str(content["TradingVolume"])]      
-        print(lst_price)
+        df = pd.DataFrame(
+            data=[{'datetime': date[0:10],
+                'open': str(content["OpeningPrice"]),
+                'high': str(content["HighPrice"]),
+                'low': str(content["LowPrice"]),
+                'close': str(content["CurrentPrice"]),
+                'volume': str(content["TradingVolume"]),
+                }])
+
+        df_daily = df.set_index("datetime")
 
         # 個別株価情報テーブルを作成
         db.create_nametbl(conn, cursor, code)
-        # 株価情報をデータベースに保存
-        db.marge_price_1record(conn, cursor, "tbl_" + code, lst_price)     # マージ
+        # 最新レコードのみを登録
+        db.one_marge_df_records(conn, cursor, code, df_daily)
+        print(code)
+        print(df_daily)
+
         # API実行回数エラーにならないようにスリープを入れる
 #        time.sleep(100/1000)    
 
+logger.info("処理 main_entry_kabukom_price を終了します。")
 
 

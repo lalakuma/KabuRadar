@@ -34,7 +34,7 @@ def get_pricedata(code, ptype, peri, freq):
         
     except YahooFinanceError as e:
         print(e.message)
-        sys.exit(1)
+#        sys.exit(1)
     
     df = pd.DataFrame(symbol_data)
     if df.size > 0:

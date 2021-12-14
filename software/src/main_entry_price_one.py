@@ -39,7 +39,8 @@ for code in codes:
         # 最新レコードのみを登録
         db.one_marge_df_records(conn, cursor, code, df_daily)
         print(code)
-#        time.sleep(1)
+        time.sleep(1)
     
 # DBクローズ
 db.close_db(conn)
+logger.info("処理 main_entry_price_one 終了。")

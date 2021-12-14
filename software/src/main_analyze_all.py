@@ -164,7 +164,7 @@ for offset in range(1):
     # 集計処理
     fullpath_shuukei = shuukei.shuukei_toCsv(kekka_path)
     lst_shuukei, filepath, finalRieki = shuukei.shuukei_makeExl(kekka_path, stance)
-    shuukei.create_pivottable(filepath)
+    # shuukei.create_pivottable(filepath)
     
     # ファイル名に最終利益追加
     newfilename = fullpath_shuukei.replace('PF', 'Y' + str(finalRieki) + '_PF')
