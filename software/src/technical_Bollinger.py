@@ -14,7 +14,40 @@ def Bollinger(df):
     df['bb_lower3'] = df['bb_mean'] - (df['bb_std'] * 3)
 
     return df
-    
+        
+#################################################################
+# 指定期間内で2回以上ボリンジャーバンドの2σ/-2σを超えているかを判定する
+# 引数：mode        (MODE_BUY=買い、MODE_SELL=売り)
+#     : dfrsi       データフレーム
+#     : period      期間
+# 戻り値：True=買いの時に2回以上2σを超えている/売りの時に-2σを超えている
+#       ：False=買いの時に2回以上2σを超えていない/売りの時に-2σを超えていない
+#################################################################
+def jdg_Bollinger_over(sb_mode, df, period):
+    # 最後から指定期間分のレコードを取得
+    df_bb = df.tail(period)
+    # 指定期間のデータを抽出
+    size = len(df_bb)
+    judge = False
+
+    overCnt = 0
+    for row in df_bb.itertuples():
+        offset = row.close * 0.005
+        if sb_mode == DEF.MODE_BUY:
+            if row.close > row.bb_upper2 + offset:
+                overCnt += 1
+            if overCnt > 1:
+                judge = True
+                break
+        else:
+            if row.close < row.bb_lower2 - offset:
+                overCnt += 1
+            if overCnt > 1:
+                judge = True
+                break
+
+    return judge
+
 #################################################################
 # 指定期間内でボリンジャーバンドの2σ/-2σを超えているかを判定する
 # 引数：mode        (MODE_BUY=買い、MODE_SELL=売り)

@@ -109,7 +109,9 @@ lst_low_rsi = []
 lst_codes = []
 judge_buy_moving = False
 
-def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candle = False, jdg_ind = False, jdg_bolin = False, jdg_mov=False, jdg_rsi=False, jdg_macd=False, jdg_brk=False, jdg_berd=False):
+def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
+        , jdg_candle = False, jdg_ind = False, jdg_bolin = False, jdg_mov=False
+        , jdg_rsi=False, jdg_macd=False, jdg_brk=False, jdg_berd=False):
     ret = 0
     buy_pos = 0
     buy_price = 0
@@ -134,7 +136,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
     sb_mode = DEF.MODE_BUY  # 初期値は買い
     
     if req_sb_mode != DEF.MODE_BOTH:
-    	sb_mode = req_sb_mode
+        sb_mode = req_sb_mode
     
     # 個別銘柄 期間データ取得
     today = date.today()                                                          # 今日(日付型)
@@ -257,19 +259,19 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
 
             # 要求売買モードが両建てモードではない場合
             if req_sb_mode != DEF.MODE_BOTH:
-	            # 買いモードの時
-	            if sb_mode == DEF.MODE_BUY:
-	                # 指標が75日線より低い場合は購入しない
-	                if ind_sma75 > ind_close:
-	                    continue
+                # 買いモードの時
+                if sb_mode == DEF.MODE_BUY:
+                    # 指標が75日線より低い場合は購入しない
+                    if ind_sma75 > ind_close:
+                        continue
 	            # 売りモードの時
-	            if sb_mode == DEF.MODE_SELL:
-	                # 指標が75日線より高い場合は購入しない
-	                if ind_sma75 < ind_close:
-	                    continue
+            if sb_mode == DEF.MODE_SELL:
+                    # 指標が75日線より高い場合は購入しない
+                    if ind_sma75 < ind_close:
+                        continue
             # 要求売買モードが両建てモードの場合、売買モードを設定
             else:
-            	# 指標銘柄のMACDで売買モードを決める　（今一だった）
+                # 指標銘柄のMACDで売買モードを決める　（今一だった）
 #                ind_macd = df_indicator["MACD"].values[-1]
 #                ind_sig = df_indicator["Signal"].values[-1]
 #                if ind_macd > ind_sig:
@@ -389,7 +391,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
                 kessai_buy = True
                 buy_kessai_val = i_close
             # MACD < SIGで売りシグナル(MACDのデッドクロス)
-            elif (macd <= sig):
+            elif (jdg_macd == True) and (macd <= sig):
                 kessai_buy = True
                 buy_kessai_val = i_close
             # 終値が前日の安値を下回ったら売り
@@ -474,6 +476,12 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH, jdg_candl
         # ボリンジャー判定
         #----------------------
         if jdg_bolin == True:
+            #------------------------------------------------------------
+            # 指定期間内で2回以上ボリンジャーバンドの2σ/-2σを超えているかを判定する
+            # ない(False)場合は終了
+            #------------------------------------------------------------
+            if tc_bb.jdg_Bollinger_over(sb_mode, bkdf, 3) == False:
+                continue
             #------------------------------------------------------------
             # 指定期間内でボリンジャーバンドで2σを大きく超えている日があること
             # ない(False)場合は終了
