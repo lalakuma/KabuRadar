@@ -110,7 +110,7 @@ lst_codes = []
 judge_buy_moving = False
 
 def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
-        , jdg_candle = False, jdg_ind = False, jdg_bolin = False, jdg_mov=False
+        , jdg_candle = False, jdg_ind = False, jdg_bolin = False, jdg_mov=False, jdg_pfct=False
         , jdg_rsi=False, jdg_macd=False, jdg_brk=False, jdg_berd=False):
     ret = 0
     buy_pos = 0
@@ -157,7 +157,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
         df['close'] = df['close'].astype('int64')
         df['volume'] = df['volume'].astype('int64')
         df['SMA5'] = df['close'].rolling(window=5).mean()               # 5日移動平均を追加
-        if (jdg_mov == True) or (jdg_ind == True) :    
+        if (jdg_mov == True) or(jdg_pfct == True) or (jdg_ind == True) :    
             df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
             df['SMASET'] = df['close'].rolling(window=Prm.lineave).mean()   # 設定した移動平均を追加
     except:
@@ -172,7 +172,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
         return (-1)
 
     #日付をインデックスにして、必要なアイテム順に並び替え
-    if (jdg_mov == True) or (jdg_ind == True) :    
+    if (jdg_mov == True) or (jdg_pfct == True) or (jdg_ind == True) :    
         df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA25","SMASET"]]
     else:
         df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5"]]

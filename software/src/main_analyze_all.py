@@ -109,6 +109,7 @@ for offset in range(1):
     cls_dt.write_prm_tocsv(kekka_path)      # パラメータをCSVに保存
     conf.copy_confFile(kekka_path)          # 設定ファイルを結果フォルダにコピー（どの設定ファイルで実行したかを残す為）
     one_shot = 0    # 単発処理モード 0:無効、0以外:単発処理する銘柄コードを設定する
+#    one_shot = 0    # 単発処理モード 0:無効、0以外:単発処理する銘柄コードを設定する
 
     CD_NIKKEI = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_IND_CODE))
     ind_code = CD_NIKKEI
@@ -147,6 +148,7 @@ for offset in range(1):
                 jdg_candle = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_CAND)),      # ローソク足判定
                 jdg_ind = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_IND)),          # 指標銘柄判定
                 jdg_mov = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV)),          # 移動平均線判定
+                jdg_pfct = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_PFCT)),          # 移動平均線パーフェクトオーダー判定
                 jdg_bolin = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BOLIN)),      # ボリンジャー判定
                 jdg_rsi = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSI)),          # RSI判定
                 jdg_macd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MACD)),        # MACD判定
