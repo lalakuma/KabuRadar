@@ -148,7 +148,8 @@ for offset in range(1):
                 jdg_candle = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_CAND)),      # ローソク足判定
                 jdg_ind = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_IND)),          # 指標銘柄判定
                 jdg_mov = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV)),          # 移動平均線判定
-                jdg_pfct = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_PFCT)),          # 移動平均線パーフェクトオーダー判定
+                jdg_mov_pfct = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV_PFCT)),# 移動平均線パーフェクトオーダー判定
+                jdg_mov_push = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV_PUSH)),# 移動平均線押し目判定
                 jdg_bolin = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BOLIN)),      # ボリンジャー判定
                 jdg_rsi = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSI)),          # RSI判定
                 jdg_macd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MACD)),        # MACD判定

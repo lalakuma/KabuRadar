@@ -37,11 +37,24 @@ apipasswd = conf.get_config(conf.CONF_SEC_KABUSAPI, conf.CONF_KEY_API_PASSWD)
 # APIにてトークン取得
 tkn = token.getToken(apipasswd)
 
+skip = 0 # 0:スキップなし、1:スキップあり
+
 for code in codes:
+    #途中までスキップする場合に使用する
+    if skip == 1:
+        if code == '9042':
+            skip = 0
+        else:
+            continue
+
     # 登録銘柄全削除（レジスト数エラー対策）
     unregiall.unregisterall(tkn["Token"])
     # APIにて現時点の板情報を取得する
     content = board.get_board(tkn["Token"], code)
+
+    # エラーコードを検出した場合はパスして次のループに進む
+    if 'Code' in content:
+        continue
 
      # ['日付', 'コード', '始値', '高値', '安値', '終値', '終値調整', '出来高']を抽出
     lst_price = []

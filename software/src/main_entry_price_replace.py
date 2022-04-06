@@ -14,15 +14,24 @@ conn, cursor = db.connect_db()
 # 全銘柄コードリスト取得
 codes = db.read_code_all(cursor, "tbl_codelist")
 
-ptype = "day"
-period = 5      # 期間(日)
+ptype = "year"
+period = 1      # 期間(日)
 frequency = 1   # 日足
 
 # 現在DBに登録されている全テーブルリストを取得
 lst_tbl = db.get_tablelist(conn, cursor)
 
+skip = 0 # 0:スキップなし、1:スキップあり
 # 銘柄コードリストに登録されている全コードに対して処理を行う
 for code in codes:
+
+    #途中までスキップする場合に使用する
+    if skip == 1:
+        if code == '8282':
+            skip = 0
+        else:
+            continue
+
     strtbl = "tbl_" + code
     # 存在するテーブルのみ処理する
     if strtbl in lst_tbl:

@@ -110,8 +110,8 @@ lst_codes = []
 judge_buy_moving = False
 
 def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
-        , jdg_candle = False, jdg_ind = False, jdg_bolin = False, jdg_mov=False, jdg_pfct=False
-        , jdg_rsi=False, jdg_macd=False, jdg_brk=False, jdg_berd=False):
+        , jdg_candle = False, jdg_ind = False, jdg_bolin = False, jdg_mov=False, jdg_mov_pfct=False
+        , jdg_mov_push=False, jdg_rsi=False, jdg_macd=False, jdg_brk=False, jdg_berd=False):
     ret = 0
     buy_pos = 0
     buy_price = 0
@@ -157,7 +157,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
         df['close'] = df['close'].astype('int64')
         df['volume'] = df['volume'].astype('int64')
         df['SMA5'] = df['close'].rolling(window=5).mean()               # 5日移動平均を追加
-        if (jdg_mov == True) or(jdg_pfct == True) or (jdg_ind == True) :    
+        if (jdg_mov == True) or (jdg_ind == True) :    
             df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
             df['SMASET'] = df['close'].rolling(window=Prm.lineave).mean()   # 設定した移動平均を追加
     except:
@@ -172,7 +172,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
         return (-1)
 
     #日付をインデックスにして、必要なアイテム順に並び替え
-    if (jdg_mov == True) or (jdg_pfct == True) or (jdg_ind == True) :    
+    if (jdg_mov == True) or (jdg_ind == True) :    
         df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA25","SMASET"]]
     else:
         df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5"]]
@@ -221,7 +221,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
         # 日付取得
         #----------------------
         idx_date = row[0]
-#        if str(datetime.date(idx_date)) == '2021-10-29':
+#        if str(datetime.date(idx_date)) == '2022-03-29':
 #            a = 1
         #----------------------
         # 最新のMACDとシグナルの値を取得
@@ -379,9 +379,9 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
                 kessai_buy = True
                 buy_kessai_val = i_close
             # 始値が購入日の安値を下回ったら損切り
-            elif (i_open < pre_low):
-                kessai_buy = True
-                buy_kessai_val = i_open                 # この時は始値を売値にする            
+#            elif (i_open < pre_low):
+#                kessai_buy = True
+#                buy_kessai_val = i_open                 # この時は始値を売値にする            
             # 場中に購入日に設定した下限を下回ったら場中でも即損切り
             # 下限は購入日のローソク足が陽線なら始値、陰線なら安値としている
             elif loss_line > i_low:
@@ -395,9 +395,9 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
                 kessai_buy = True
                 buy_kessai_val = i_close
             # 終値が前日の安値を下回ったら売り
-            elif pre_low > i_close:
-                kessai_buy = True
-                buy_kessai_val = i_close
+#            elif pre_low > i_close:
+#                kessai_buy = True
+#                buy_kessai_val = i_close
             # 5日移動平均より下回ったら売り
             elif i_sma5 > i_close:
                 kessai_buy = True
@@ -501,6 +501,19 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
         if jdg_mov == True:
             if tc_movave.jdg_movave_trend(sb_mode, bkdf) == 0:
                 continue
+            #----------------------
+            # パーフェクトオーダー判定
+            #----------------------
+            if jdg_mov_pfct == True:
+                if tc_movave.jdg_movave_PfctOder(sb_mode, bkdf) == 0:
+                    continue
+            #----------------------
+            # 押し目判定
+            #----------------------
+            if jdg_mov_pfct == True:
+                if tc_movave.jdg_movave_Push(sb_mode, bkdf, i_close) == 0:
+                    continue
+
         #----------------------
         # RSI判定
         #----------------------
