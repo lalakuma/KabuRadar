@@ -93,7 +93,7 @@ def decide_trade(DirPath):
                 wktotal += dic_row["close"]                # 一時トータルに終値加算
 
                 # トータル10000(買値が100万円)以内なら購入対象として追加
-                if wktotal < 15000:                     # 一時トータルで比較
+                if wktotal < 10000:                     # 一時トータルで比較
 #                if wktotal < 5000:                     # 一時トータルで比較
                     lst_tdyBuy.append(dic_row["code"])  # 当日購入リストにコードを追加
                     lst_data.append(dic_row)            # データリストに追加

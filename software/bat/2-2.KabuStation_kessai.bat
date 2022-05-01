@@ -32,7 +32,7 @@ echo TRADE実行
 rem '----------------------------------
 rem '全ての持ち株を翌日の寄り付きで決済注文
 rem '----------------------------------
-call C:\MorinoFolder\Python\KabuRadar\software\src\main_kabustation_kessai.py
+rem 'call C:\MorinoFolder\Python\KabuRadar\software\src\main_kabustation_kessai.py
 
 rem '-------------------------------------------
 rem ' 株ステーション終了

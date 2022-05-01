@@ -30,7 +30,7 @@ def kabukom_entry(lst_data, logger):
 
     # 1株あたりの最低価格判定ライン(この金額以下の銘柄は複数(100株単位)購入する)を設定
     # 資金に余裕がでてきたらここを増やす。リスクと利益がUP
-    low_lmt_price = 400000
+    low_lmt_price = 300000
     if mymgn <= low_lmt_price:
         low_lmt_price = mymgn
 
@@ -142,7 +142,11 @@ if iWeek != 6 and iWeek != 7:            #土日以外
     #----------------------------------------
     dt = datetime.datetime.now()
     tm = dt.time()
-
-    # 14:30～15：00の間に実行された場合はエントリー処理を行う
-    if tm < datetime.time(15,0,0) and tm > datetime.time(14,30,0):
-        kabukom_entry(lst_trade, logger)
+   
+    # トレード有効フラグ（後で設定ファイルに入れる）
+    tradeEna = 0
+    # トレード有効フラグが1なら売買を実行する
+    if tradeEna == 1:
+        # 14:30～15：00の間に実行された場合はエントリー処理を行う
+        if tm < datetime.time(15,0,0) and tm > datetime.time(14,30,0):
+            kabukom_entry(lst_trade, logger)

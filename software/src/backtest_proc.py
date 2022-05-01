@@ -306,7 +306,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
                     sb_mode = DEF.MODE_BUY
 
     
-#        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-03-12'):
+#        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-10-28'):
 #            print(bkdf)
         #==============================================================================================
         # 売却処理
@@ -321,6 +321,18 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
             if 0 == Prm.sell_period:
                 kessai_sell = True
                 sell_kessai_val = i_open
+            # 買い保持期間を過ぎたら売り
+            elif cnt_buyholddays >= Prm.sell_period:
+                kessai_sell = True
+                sell_kessai_val = i_close
+            # MACD > SIGで売りシグナル(MACDのゴールデンクロス)
+            elif (jdg_macd == True) and (macd >= sig):
+                kessai_sell = True
+                sell_kessai_val = i_close
+            # 5日移動平均より上回ったら売り
+            elif i_sma5 < i_close:
+                kessai_sell = True
+                sell_kessai_val = i_close
 
             #-----------------------------
             # 決済処理
@@ -368,7 +380,7 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
 #            if loss_line > i_open:
 #                kessai_buy = True
 #                buy_kessai_val = i_open                 # この時は始値を売値にする
-
+            # 危険な上髭判定
             danger = judge_danger_upper(i_close, i_open, i_high)
             # 買い保持期間を0にした場合は購入日翌日の始値で売り
             if 0 == Prm.sell_period:
@@ -384,9 +396,9 @@ def backtst_proc(code, df_indicator, Prm, req_sb_mode = DEF.MODE_BOTH
 #                buy_kessai_val = i_open                 # この時は始値を売値にする            
             # 場中に購入日に設定した下限を下回ったら場中でも即損切り
             # 下限は購入日のローソク足が陽線なら始値、陰線なら安値としている
-            elif loss_line > i_low:
-                kessai_buy = True
-                buy_kessai_val = loss_line              # 購入時の安値を売値にする。(購入時に逆指値で注文しておく必要あり)
+#            elif loss_line > i_low:
+#                kessai_buy = True
+#                buy_kessai_val = loss_line              # 購入時の安値を売値にする。(購入時に逆指値で注文しておく必要あり)
             elif danger == True:
                 kessai_buy = True
                 buy_kessai_val = i_close
