@@ -108,8 +108,8 @@ for offset in range(1):
 
     cls_dt.write_prm_tocsv(kekka_path)      # パラメータをCSVに保存
     conf.copy_confFile(kekka_path)          # 設定ファイルを結果フォルダにコピー（どの設定ファイルで実行したかを残す為）
-    one_shot = 0    # 単発処理モード 0:無効、0以外:単発処理する銘柄コードを設定する
-#    one_shot = 0    # 単発処理モード 0:無効、0以外:単発処理する銘柄コードを設定する
+    oneshot_code = 0    # 単発処理モード 0:無効、0以外:単発処理する銘柄コードを設定する
+#    oneshot_code = 0    # 単発処理モード 0:無効、0以外:単発処理する銘柄コードを設定する
 
     CD_NIKKEI = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_IND_CODE))
     ind_code = CD_NIKKEI
@@ -128,6 +128,10 @@ for offset in range(1):
     # =====================================================
     # 銘柄コードリストに登録されている全コードに対して処理を行う
     for code in codes:
+        # 単発処理が有効な場合はコードを設定する
+        if oneshot_code != 0:
+            code = oneshot_code
+
         print("CODE=", code)
 
         #codeが無効に設定されている場合は処理しない
@@ -135,26 +139,8 @@ for offset in range(1):
         if code_ena == 0:
             continue
 
-        # 売りシグナル = 0：保持期間なし(5日移動平均以下まで)、1～4：数値が指定保持期間、5：保持期間も移動平均もなしでMACDクロスで判定
-
-        # 単発処理が有効な場合はコードを設定する
-        if one_shot != 0:
-            code = one_shot
-
-        result = bktst.backtst_proc(code,
-                df_indicator,
-                cls_dt, 
-                req_sb_mode = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SELLBUY)),  # 売買モード
-                jdg_candle = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_CAND)),      # ローソク足判定
-                jdg_ind = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_IND)),          # 指標銘柄判定
-                jdg_mov = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV)),          # 移動平均線判定
-                jdg_mov_pfct = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV_PFCT)),# 移動平均線パーフェクトオーダー判定
-                jdg_mov_push = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV_PUSH)),# 移動平均線押し目判定
-                jdg_bolin = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BOLIN)),      # ボリンジャー判定
-                jdg_rsi = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSI)),          # RSI判定
-                jdg_macd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MACD)),        # MACD判定
-                jdg_brk = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BRK)),          # ブレイク判定
-                jdg_berd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BERD)))        # 髭判定
+        # バックテストメイン処理
+        result = bktst.backtst_proc(code, df_indicator, cls_dt)
         if result == -1:
             continue
 
@@ -162,7 +148,7 @@ for offset in range(1):
         write_csv(cls_dt, kekka_path)
 
         # 単発処理が有効な場合は1回でループを抜ける
-        if one_shot != 0:
+        if oneshot_code != 0:
             break
 
     # 集計処理
@@ -172,7 +158,8 @@ for offset in range(1):
     
     # ファイル名に最終利益追加
     newfilename = fullpath_shuukei.replace('PF', 'Y' + str(finalRieki) + '_PF')
-    os.rename(fullpath_shuukei, newfilename)
+    if fullpath_shuukei != "":
+        os.rename(fullpath_shuukei, newfilename)
 
 # DBクローズ
 db.close_db(conn)

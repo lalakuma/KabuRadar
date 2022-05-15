@@ -57,7 +57,7 @@ def decide_trade(DirPath):
     df_con = df_con.reset_index()
     df_con = pd.merge(df_con, df_set, on='code')            # tbl_code_setとマージ
     df_con = df_con.sort_values("Index", ascending=True)    # 日付順にソート
-    df_con = df_con.loc[:,["Index","code","close","PF","mark","buygain","sellgain","income"]]
+    df_con = df_con.loc[:,["Index","code","open","close","PF","mark","buygain","sellgain","income"]]
     df_con = df_con.reset_index(drop=True)
     #選別　（お試し用）
     daytotal = 0
@@ -150,7 +150,7 @@ def shuukei_makeExl(shuukei_path, stance):
     df_con, lst_data = decide_trade(shuukei_path)
     if len(lst_data) == 0:
         print("集計対象ファイルがありません。")
-        return
+        return 0,"",0
 
     filepath = shuukei_path + fileShukei
     # エクセルに書き込み
@@ -162,28 +162,28 @@ def shuukei_makeExl(shuukei_path, stance):
 
     # エクセルファイルの先頭行にフィルターをつける
     if(len(df_con) > 0):
-        wb= px.load_workbook(filepath)
+        wb= px.load_workbook(filepath)          # [Sheet1]
         ws = wb.active
         ws.column_dimensions['B'].width =22
         ws.column_dimensions['F'].width =10
         ws.auto_filter.ref = ws.dimensions
         ws['B1'] = 'date'
-        for row, cellObj in enumerate(list(ws.columns)[8]): # セル(K列)に累積計算関数を書き込む
+        for row, cellObj in enumerate(list(ws.columns)[9]): # セル(J列)に累積計算関数を書き込む
             if row == 0:
                 continue
-            n = '=IF(ISNUMBER(I' + str(row) + '),I' + str(row) + '+G' + str(row+1) + '+H' + str(row+1) + ',0)'
+            n = '=IF(ISNUMBER(J' + str(row) + '),J' + str(row) + '+H' + str(row+1) + '+I' + str(row+1) + ',0)'
             cellObj.value = n
 
     if(len(dfreal) > 0):
-        ws1 = wb.worksheets[1]
+        ws1 = wb.worksheets[1]                  # [Sheet2]
         ws1.column_dimensions['B'].width =22
         ws1.column_dimensions['F'].width =10
         ws1.auto_filter.ref = ws1.dimensions
         ws1['B1'] = 'date'
-        for row, cellObj in enumerate(list(ws1.columns)[8]): # セル(I列)に累積計算関数を書き込む
+        for row, cellObj in enumerate(list(ws1.columns)[9]): # セル(J列)に累積計算関数を書き込む
             if row == 0:
                 continue
-            n = '=IF(ISNUMBER(I' + str(row) + '),I' + str(row) + '+G' + str(row+1) + '+H' + str(row+1) + ',0)'
+            n = '=IF(ISNUMBER(J' + str(row) + '),J' + str(row) + '+H' + str(row+1) + '+I' + str(row+1) + ',0)'
             cellObj.value = n
 
             ws1.cell(row+1,column=10).value = '=YEAR(B' + str(row+1) + ')'
@@ -223,6 +223,8 @@ def shuukei_toCsv(shuukei_path):
     filecnt = 0
     cnt_win = 0
     cnt_lose = 0
+    strpath = ""
+
     for fl in filelst:
         if fl[:4] == "code":
             arr = fl.split('_')
@@ -252,6 +254,7 @@ def shuukei_toCsv(shuukei_path):
                 ignore_index=True)
 
     if len(df) > 0 :
+        print(df)
         #日付をインデックスにして、必要なアイテム順に並び替え
         df = df.set_index("code").loc[:,["pf","pg","mg","incomes","winlose","winPer","rsi"]]
         strWinPer = "rate" + '{:.1f}'.format(df['winPer'].mean())
@@ -303,8 +306,8 @@ def create_pivottable(skfilepath):
     wb.Close(True)
     excel.Quit()
 
-#shuukei_toCsv('..\\..\\output\\honban\\')
-#sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST')
+shuukei_toCsv('..\\..\\output\\honban\\')
+sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST')
 #create_pivottable(skfilepath)
 
 

@@ -45,8 +45,14 @@ def jdg_break_out2(sb_mode, df, period, offset, close):
     sigsw_break = 0
     breakoffset = close * offset
 
-    # 最後から指定期間分のレコードを取得
-    breakdf = df.tail(period)
+    # 最後から指定期間分のレコードを取得(最低3以上)
+    if period >= 3:
+        num = period
+    else:
+        num = 3
+
+    breakdf = df.tail(num)
+
     # 指定期間のデータを抽出
     size = len(breakdf)
 

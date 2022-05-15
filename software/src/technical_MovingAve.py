@@ -85,18 +85,20 @@ def jdg_movave_Push(mode, df, i_close):
 #    print(taildf)
     
     # 買いモードの時
-    if mode == DEF.MODE_BUY:               
-        # 過去3日間で5日線が右下がりになっていたか
-        if (sma5_pre1 < sma5_pre2) and (sma5_pre2 < sma5_pre3):
-            # 前日から右上がりになっていれば買い
-            if sma5_pre1 < (sma5 - sma5_ofset):
-                ret_sig = 1         # 買いシグナル設定
+    if mode == DEF.MODE_BUY:    
+        if i_close > sma5:
+            # 過去3日間で5日線が右下がりになっていたか
+            if (sma5_pre1 < sma5_pre2) and (sma5_pre2 < sma5_pre3):
+                # 前日から右上がりになっていれば買い
+                if sma5_pre1 < (sma5 - sma5_ofset):
+                    ret_sig = 1         # 買いシグナル設定
     # 売りモードの時
     elif mode == DEF.MODE_SELL:
-        # 過去3日間で5日線が右上がりになっていたか
-        if (sma5_pre1 > sma5_pre2) and (sma5_pre2 > sma5_pre3):
-            # 前日から右下がりになっていれば買い
-            if sma5_pre1 > (sma5 + sma5_ofset):   # 
-                ret_sig = 1         # 売りシグナル設定
+        if i_close < sma5:
+            # 過去3日間で5日線が右上がりになっていたか
+            if (sma5_pre1 > sma5_pre2) and (sma5_pre2 > sma5_pre3):
+                # 前日から右下がりになっていれば買い
+                if sma5_pre1 > (sma5 + sma5_ofset):   # 
+                    ret_sig = 1         # 売りシグナル設定
 
     return ret_sig 

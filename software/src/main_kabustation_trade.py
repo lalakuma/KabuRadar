@@ -132,7 +132,7 @@ if iWeek != 6 and iWeek != 7:            #土日以外
     #----------------------------------------
     lst_linenoti = []
     for trd in lst_trade:
-        if trd["mark"] == "新買" or trd["mark"] == "新売":
+        if trd["mark"] == "新買" or trd["mark"] == "新売" or trd["mark"] == "買シ" or trd["mark"] == "売シ":
             lst_linenoti.append("[" + str(trd["code"]) + "]" + trd["mark"] + " PF:" + str(trd["PF"]) + " ¥{:,d}".format(trd["close"]))
 
     line.line_notify(lst_linenoti, stance)
