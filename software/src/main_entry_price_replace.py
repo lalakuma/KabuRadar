@@ -14,8 +14,9 @@ conn, cursor = db.connect_db()
 # 全銘柄コードリスト取得
 codes = db.read_code_all(cursor, "tbl_codelist")
 
-ptype = "year"
-period = 1      # 期間(日)
+#ptype = "year"
+ptype = "day"
+period = 10      # 期間(日)
 frequency = 1   # 日足
 
 # 現在DBに登録されている全テーブルリストを取得

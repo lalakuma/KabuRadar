@@ -1,3 +1,4 @@
+from asyncio.windows_events import NULL
 from math import fabs
 import common_def as DEF
 import pandas as pd
@@ -13,6 +14,7 @@ import numpy
 import os
 from datetime import datetime, date, timedelta
 import getConfig as conf
+import technical_BottomSearch as tc_bc
 
 #****************************
 # クラス定義
@@ -148,6 +150,8 @@ class Judge:
     jdg_macd=False
     jdg_brk=False
     jdg_berd=False
+    jdg_bottom=False
+    jdg_rsvent=False
 
     def __init__(self, scrsec):
         
@@ -161,6 +165,8 @@ class Judge:
         self.jdg_macd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MACD))        # MACD判定
         self.jdg_brk = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BRK))          # ブレイク判定
         self.jdg_berd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BERD))        # 髭判定
+        self.jdg_bottom = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BOTTOM))    # 2番3番底判定
+        self.jdg_rsvent = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSVENT))    # 予約購入時判定
 
 #################################################################
 # バックテストメイン処理
@@ -186,6 +192,7 @@ def backtst_proc(code, df_indicator, Prm):
     ind_preclose = 0
     i_presma25 = 0
     ti.isreserved = False         # 予約(True：エントリー予約あり、False：なし)
+    idx_date = NULL
 
     req_sb_mode = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SELLBUY))       # 売買モード
     ent_timing = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_ENT_TIMING))     # エントリータイミング
@@ -258,6 +265,11 @@ def backtst_proc(code, df_indicator, Prm):
     if jg.jdg_bolin == True:
         df_price = tc_bb.Bollinger(df_price)
 
+    # 5日線による2番底、3番底を検出
+    bs = tc_bc.BtmSrch(df['datetime'], df['SMA5'])
+    if jg.jdg_bottom == True:
+        bs.make2nd3rdBottom()
+    
     bkdf = pd.DataFrame()
     for row in df_price.itertuples():
     
@@ -275,9 +287,17 @@ def backtst_proc(code, df_indicator, Prm):
         #----------------------
         # 日付取得
         #----------------------
+        # 前営業日を取得。ない場合は当日を設定。
+        if idx_date == NULL:
+            idx_predate = row[0]
+        else:
+            idx_predate = idx_date
+
+        # 当日を取得
         idx_date = row[0]
         if str(datetime.date(idx_date)) == '2022-01-18':
             a = 1
+   
         #----------------------
         # 最新のMACDとシグナルの値を取得
         #----------------------
@@ -380,29 +400,31 @@ def backtst_proc(code, df_indicator, Prm):
         #==============================================================================================
         # 売却処理
         #==============================================================================================
-        kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, cnt_buyholddays)
-
+        cnt_buyholddays = kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholddays)
+        
         #**************************************************************************************************
         # 購入判定
         #**************************************************************************************************
         if ti.isreserved == False:
             # 売買シグナル判定処理
-            jdg_rlt = judge_signal(cp, ti, jg, bkdf, Prm)
+            jdg_rlt = judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate)
             if jdg_rlt == False:
                 continue
         else:
-            # 翌日購入指定の時、買シグナルON時の終値よりも翌日の始値が低く始まった場合は購入しない
-            if ti.sb_mode == DEF.MODE_BUY:
-                if i_close_pre1 >= cp.i_open:
-                    # 予約解除
-                    ti.isreserved = False
-                    continue
-            # 翌日購入指定の時、売シグナルON時の終値よりも翌日の始値が高く始まった場合は購入しない
-            if ti.sb_mode == DEF.MODE_SELL:
-                if i_close_pre1 <= cp.i_open:
-                    # 予約解除
-                    ti.isreserved = False
-                    continue                
+            # 予約購入時判定を行う場合
+            if jg.jdg_rsvent == True:
+                # 翌日購入指定の時、買シグナルON時の終値よりも翌日の始値が低く始まった場合は購入しない
+                if ti.sb_mode == DEF.MODE_BUY:
+                    if i_close_pre1 >= cp.i_open:
+                        # 予約解除
+                        ti.isreserved = False
+                        continue
+                # 翌日購入指定の時、売シグナルON時の終値よりも翌日の始値が高く始まった場合は購入しない
+                if ti.sb_mode == DEF.MODE_SELL:
+                    if i_close_pre1 <= cp.i_open:
+                        # 予約解除
+                        ti.isreserved = False
+                        continue                
         #**************************************************************************************************
         # ここまで残ったものをエントリー対象とする。
         #**************************************************************************************************
@@ -446,7 +468,7 @@ def backtst_proc(code, df_indicator, Prm):
 # 引数：cp  株価情報クラス
 # 戻り値：なし
 #################################################################
-def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, cnt_buyholddays):
+def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholddays):
     #-----------------------
     # 売りポジションがある時	(※現状は翌日始値売りにのみ対応)
     #-----------------------
@@ -539,6 +561,8 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, cnt_buyholddays):
         elif cp.i_sma5 > cp.i_close:
             ti.kessai_buy = True
             buy_kessai_val = cp.i_close
+        else:
+            print(cp.code, ":", str(idx_date.date()), "継続")
 
         # 前日の安値を更新
 #        pre_low = row.low
@@ -584,12 +608,23 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, cnt_buyholddays):
     bkdf.loc[lastidx_bk, "sellgain"] = sellgain
     bkdf.loc[lastidx_bk, "income"] = ti.income
 
+    return cnt_buyholddays
+
 #################################################################
 # 売買シグナル判定処理
 # 引数：cp  株価情報クラス
 # 戻り値：なし
 #################################################################
-def judge_signal(cp, ti, jg, bkdf, Prm):
+def judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate):
+
+    #----------------------
+    # 2番、3番底判定
+    #----------------------
+    if jg.jdg_bottom == True:
+        if bs.jdg_2nd3rdBottom(idx_predate) == False:
+#        if bs.jdg_2nd3rdBottom(idx_date) == False:
+            return False
+
     #----------------------
     # ローソク足判定
     #----------------------

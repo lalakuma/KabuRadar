@@ -285,7 +285,7 @@ def create_pivottable(skfilepath):
     wb = excel.Workbooks.Open(fpath)
 
     ## Sheet 1 指定し､フィルターを有効にする
-    wbs1 = wb.Sheets('1日10000以下')
+    wbs1 = wb.Sheets('-下')
 
     ## ピボットテーブルの作成
     wbs2_name = 'pivot'
