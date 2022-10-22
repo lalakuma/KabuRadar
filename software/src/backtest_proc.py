@@ -275,7 +275,10 @@ def backtst_proc(code, df_indicator, Prm):
     
         # 移動平均が算出可能な日付付近までスキップ
         wkdf= pd.DataFrame([row])
-        bkdf = bkdf.append(wkdf,ignore_index=True)
+        
+        #bkdf = bkdf.append(wkdf,ignore_index=True)  旧       
+        bkdf = pd.concat([bkdf, wkdf], ignore_index=True)
+        
         lastidx_bk = len(bkdf) - 1
         if (jg.jdg_mov == True) or (jg.jdg_ind == True) :    
             if numpy.isnan(wkdf["SMASET"].values) == True:
@@ -621,8 +624,8 @@ def judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate):
     # 2番、3番底判定
     #----------------------
     if jg.jdg_bottom == True:
-        if bs.jdg_2nd3rdBottom(idx_predate) == False:
-#        if bs.jdg_2nd3rdBottom(idx_date) == False:
+#        if bs.jdg_2nd3rdBottom(idx_predate) == False:
+        if bs.jdg_2nd3rdBottom(idx_date) == False:
             return False
 
     #----------------------
@@ -630,7 +633,7 @@ def judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate):
     #----------------------
     if jg.jdg_candle == True:
         # ローソクが陽線か陰線かを判別
-        diff = cp.i_close - cp.i_open             # 始値と現在値の差分から実線の長さを設定
+        diff = cp.i_close - cp.i_open       # 始値と現在値の差分から実線の長さを設定
         if diff >= 0:
             line_kind = 1                   # ライン種別を陽線に設定
         else:

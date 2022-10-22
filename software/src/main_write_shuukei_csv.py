@@ -186,11 +186,11 @@ def shuukei_makeExl(shuukei_path, stance):
             n = '=IF(ISNUMBER(J' + str(row) + '),J' + str(row) + '+H' + str(row+1) + '+I' + str(row+1) + ',0)'
             cellObj.value = n
 
-            ws1.cell(row+1,column=10).value = '=YEAR(B' + str(row+1) + ')'
-            ws1.cell(row+1,column=11).value = '=MONTH(B' + str(row+1) + ')'
+            ws1.cell(row+1,column=11).value = '=YEAR(B' + str(row+1) + ')'
+            ws1.cell(row+1,column=12).value = '=MONTH(B' + str(row+1) + ')'
 
-        ws1.cell(row=1,column=10).value = '年'
-        ws1.cell(row=1,column=11).value = '月'
+        ws1.cell(row=1,column=11).value = '年'
+        ws1.cell(row=1,column=12).value = '月'
 
         # セルの色を設定
         fmtarea = 'F2:F' + str(row + 1)
@@ -242,16 +242,28 @@ def shuukei_toCsv(shuukei_path):
             cnt_win += int(strwl[1:lpos])
             cnt_lose += int(strwl[lpos + 1:])
 
-            df = df.append({'code':arr[1], 
-                'code':(arr[0])[4:], 
-                'rsi':(arr[1])[3:], 
-                'winlose':strwl, 
-                'winPer':int((arr[3])[:-1]), 
-                'incomes':int((arr[4])[3:]), 
-                'pg':wk_pgain, 
-                'mg':wk_mgain, 
-                'pf':wk_pf}, 
-                ignore_index=True)
+            # df = df.append({'code':arr[1],    使えなくなるらしい
+            #     'code':(arr[0])[4:], 
+            #     'rsi':(arr[1])[3:], 
+            #     'winlose':strwl, 
+            #     'winPer':int((arr[3])[:-1]), 
+            #     'incomes':int((arr[4])[3:]), 
+            #     'pg':wk_pgain, 
+            #     'mg':wk_mgain, 
+            #     'pf':wk_pf}, 
+            #     ignore_index=True)
+            
+            dic = {'code':arr[1], 
+                            'code':(arr[0])[4:], 
+                            'rsi':(arr[1])[3:], 
+                            'winlose':strwl, 
+                            'winPer':int((arr[3])[:-1]), 
+                            'incomes':int((arr[4])[3:]), 
+                            'pg':wk_pgain, 
+                            'mg':wk_mgain, 
+                            'pf':wk_pf}
+            dfdic = pd.DataFrame(dic, index=['i',])
+            df = pd.concat( [df, dfdic], ignore_index=True)
 
     if len(df) > 0 :
         print(df)
@@ -306,8 +318,8 @@ def create_pivottable(skfilepath):
     wb.Close(True)
     excel.Quit()
 
-shuukei_toCsv('..\\..\\output\\honban\\')
-sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST')
+#shuukei_toCsv('..\\..\\output\\honban\\')
+#sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST')
 #create_pivottable(skfilepath)
 
 
