@@ -81,7 +81,9 @@ for offset in range(1):
                             rsi_period = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_RSI_PERIOD)),
                             rsi_border = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_RSI_BORDER)), 
                             rsi_max = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_RSI_MAX)), 
-                            rsi_per = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_RSI_PER)))
+                            rsi_per = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_RSI_PER)),
+                            srsi_hi = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SRSI_HI)),
+                            srsi_low = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SRSI_LOW)))
 
     #--------------------------
     # 結果格納フォルダパス取得
@@ -132,7 +134,7 @@ for offset in range(1):
         # 単発処理が有効な場合はコードを設定する
         if oneshot_code != 0:
             code = oneshot_code
-
+        
         print("CODE=", code)
 
         #codeが無効に設定されている場合は処理しない

@@ -241,18 +241,6 @@ def shuukei_toCsv(shuukei_path):
             lpos = strwl.find('L')
             cnt_win += int(strwl[1:lpos])
             cnt_lose += int(strwl[lpos + 1:])
-
-            # df = df.append({'code':arr[1],    使えなくなるらしい
-            #     'code':(arr[0])[4:], 
-            #     'rsi':(arr[1])[3:], 
-            #     'winlose':strwl, 
-            #     'winPer':int((arr[3])[:-1]), 
-            #     'incomes':int((arr[4])[3:]), 
-            #     'pg':wk_pgain, 
-            #     'mg':wk_mgain, 
-            #     'pf':wk_pf}, 
-            #     ignore_index=True)
-            
             dic = {'code':arr[1], 
                             'code':(arr[0])[4:], 
                             'rsi':(arr[1])[3:], 
@@ -269,7 +257,9 @@ def shuukei_toCsv(shuukei_path):
         print(df)
         #日付をインデックスにして、必要なアイテム順に並び替え
         df = df.set_index("code").loc[:,["pf","pg","mg","incomes","winlose","winPer","rsi"]]
-        strWinPer = "rate" + '{:.1f}'.format(df['winPer'].mean())
+        fWinPer = (cnt_win / (cnt_win + cnt_lose)) * 100
+#        strWinPer = "rate" + '{:.1f}'.format(df['winPer'].mean())
+        strWinPer = "rate" + '{:.2f}'.format(fWinPer)
         print(strWinPer)
         strincome = "all" + '{:}'.format(int(df['incomes'].sum()))
         print(strincome)
@@ -297,7 +287,8 @@ def create_pivottable(skfilepath):
     wb = excel.Workbooks.Open(fpath)
 
     ## Sheet 1 指定し､フィルターを有効にする
-    wbs1 = wb.Sheets('-下')
+#    wbs1 = wb.Sheets('-下')
+    wbs1 = wb.Sheets('1日10000以下')
 
     ## ピボットテーブルの作成
     wbs2_name = 'pivot'
@@ -319,8 +310,8 @@ def create_pivottable(skfilepath):
     excel.Quit()
 
 #shuukei_toCsv('..\\..\\output\\honban\\')
-#sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST')
-#create_pivottable(skfilepath)
+# sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST')
+# create_pivottable(skfilepath)
 
 
 

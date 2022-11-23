@@ -39,7 +39,10 @@ def rsi_tradingview(ohlc: pd.DataFrame, period: int = 14, round_rsi: bool = Fals
     down = pd.Series.ewm(down, alpha=1/period).mean()
 
     rsi = np.where(up == 0, 0, np.where(down == 0, 100, 100 - (100 / (1 + up / down))))
-    ohlc["RSI"] = np.round(rsi, 2) if round_rsi else rsi
+    if period == 14:
+        ohlc["RSI"] = np.round(rsi, 2) if round_rsi else rsi
+    elif period == 4:
+        ohlc["RSI4"] = np.round(rsi, 2) if round_rsi else rsi
     return ohlc
 
 #################################################################
@@ -47,7 +50,7 @@ def rsi_tradingview(ohlc: pd.DataFrame, period: int = 14, round_rsi: bool = Fals
 #   (SIB証券のアプリで表示されるのはこっち)
 #   (正直　rsi_tradingview()とどちらがいいのか分からない)
 # ################################################################
-def rsi(df):
+def rsi(df, period: int = 14):
     # 前日との差分を計算
     df_diff = df["close"].diff(1)
  
@@ -60,12 +63,12 @@ def rsi(df):
     df_down[df_down > 0] = 0
     df_down = df_down * -1
     
-    # 期間14でそれぞれの平均を算出
-    df_up_sma14 = df_up.rolling(window=14, center=False).mean()
-    df_down_sma14 = df_down.rolling(window=14, center=False).mean()
+    # 指定期間でそれぞれの平均を算出
+    df_up_sma = df_up.rolling(window=period, center=False).mean()
+    df_down_sma = df_down.rolling(window=period, center=False).mean()
  
     # RSIを算出
-    df["RSI"] = 100.0 * (df_up_sma14 / (df_up_sma14 + df_down_sma14))
+    df["RSI4"] = 100.0 * (df_up_sma / (df_up_sma + df_down_sma))
  
     return df
 
@@ -144,3 +147,55 @@ def jdg_rsi_entered(sb_mode, dfrsi, limit_rsi):
 
     return sigsw_rsi   
 
+#################################################################
+# RSIパワーゾーン短期売買法
+# 引数：mode        (MODE_BUY=買い判定、MODE_SELL=売り判定)
+#     : df       データフレーム
+# 戻り値：0=売買シグナルなし, 1=売買シグナルあり
+#################################################################
+def jdg_rsi_short(sb_mode, df, srsi_low ):
+    sigsw_rsi = 0
+    taildf = df.tail(5)
+
+    rsi4 = taildf["RSI4"].values[-1]      # 当日短期RSI
+    rsi4_pre1 = taildf["RSI4"].values[-2]   # 前日短期RSI
+
+    # 買いシグナル判定
+    if sb_mode == DEF.MODE_BUY:
+        if (rsi4 < srsi_low):
+            sigsw_rsi = 1
+        # if (rsi4_pre1 < srsi_low):
+        #     if (rsi4_pre1 < rsi4):
+        #         sigsw_rsi = 1
+    # 売りシグナル判定
+    elif sb_mode == DEF.MODE_SELL:
+#        if (rsi4_pre1 > rsi4):
+        if (rsi4_pre1 > (100 - srsi_low)):
+            if (rsi4_pre1 > rsi4):
+                sigsw_rsi = 1
+
+    return sigsw_rsi   
+#################################################################
+# RSIパワーゾーン短期売買法の決済判定
+# 引数：mode        (MODE_BUY=買い判定、MODE_SELL=売り判定)
+#     : df       データフレーム
+# 戻り値：True=決済する, False=決済しない
+#################################################################
+def jdg_rsi_shortkessai(sb_mode, df, srsi_hi):
+    sigsw_rsi = False
+    taildf = df.tail(5)
+    rsi4 = taildf["RSI4"].values[-1]      # 当日短期RSI
+    rsi4_pre1 = taildf["RSI4"].values[-2]   # 前日短期RSI
+
+    # 買いシグナル判定
+    if sb_mode == DEF.MODE_BUY:
+#        if (rsi4_pre1 > rsi4):
+            if (srsi_hi < rsi4):
+                sigsw_rsi = True
+    # 売りシグナル判定
+    elif sb_mode == DEF.MODE_SELL:
+#        if (rsi4_pre1 < rsi4):
+        if (100 - srsi_hi > rsi4):
+            sigsw_rsi = True
+
+    return sigsw_rsi   

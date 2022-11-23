@@ -11,6 +11,7 @@ import numpy  as np
 import sqlight as db
 import glob
 import shutil
+import pathlib
 
 def csv_get_all():
     # DBに接続
@@ -20,7 +21,7 @@ def csv_get_all():
 
     # entryフォルダからcsvファイルのリストを作成
     files = glob.glob("../../Input/CSV/entry/*.csv")
-
+    #files = pathlib.Path('../../Input/CSV/entry').glob('*.csv')
     # 検出したファイル数分繰り返す
     for file in files:
         pos = file.find('TimeChart') + 9

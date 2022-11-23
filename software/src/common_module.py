@@ -17,7 +17,7 @@ def set_code_setting():
     df_ena = pd.DataFrame(columns=['code', 'pf', 'Enable'])
     lstDisCode = []
     for row in df_csv.itertuples():
-        if row.pf < 2.0:
+        if row.pf < 0.8:
             df_ena = df_ena.append({'code': row.code, 'pf': row.pf, 'Enable': '0'}, ignore_index=True)
 #            lstDisCode.append(row.code)
         else:

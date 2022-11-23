@@ -30,7 +30,7 @@ class KabInf:
     #****************************
     # 初期処理
     #****************************
-    def __init__(self, lineave=200, break_offset=0, macd_offset=0, rsi_border=30, rsi_per=25, rsi_max=59, rsi_period=10, breakout=5, sell_period=3, past_period=(-1200)):
+    def __init__(self, lineave=200, break_offset=0, macd_offset=0, rsi_border=30, rsi_per=25, rsi_max=59, rsi_period=10, breakout=5, sell_period=3, past_period=(-1200), srsi_hi=70, srsi_low=30):
         self.lineave = lineave                  # 買いシグナルに使用する長期移動平均線(上昇時に買)
         self.macd_offset = macd_offset          # MACDとシグナルの開き
         self.break_offset = break_offset        # ブレイクアウトオフセット。上限を何%超えたか。(1/100で計算)
@@ -41,6 +41,8 @@ class KabInf:
         self.breakout = breakout                # ブレイクアウト判定期間に使用する値
         self.sell_period = sell_period          # 買いポジション最大保持期間
         self.past_period = past_period          # 過去何日前までのチャートを使用するか
+        self.srsi_hi = srsi_hi                  # 短期RSIの上限値(決済判定ポイント)
+        self.srsi_low = srsi_low                # 短期RSIの下限値(エントリー判定ポイント)
     #****************************
     # 勝率を取得する
     #****************************
@@ -64,6 +66,8 @@ class KabInf:
                     'rsi_per' : (self.rsi_per),
                     'rsi_max' : (self.rsi_max),
                     'rsi_period' : (self.rsi_period),
+                    'srsi_hi' : (self.srsi_hi),
+                    'srsi_low' : (self.srsi_low),
                     'breakout' : (self.breakout),
                     'sell_period' : (self.sell_period),
                     'past_period' : (self.past_period)}
@@ -118,6 +122,7 @@ class CodePrice:
     i_sma5 = 0                          # 5日移動平均値
     i_sma25 = 0                         # 25日移動平均値
     i_presma25 = 0                      # 25日移動平均値(前日)
+    i_smaset = 0                        # 指定日数移動平均値
     i_macd = 0                          # MACD
     i_sig = 0                           # シグナル
 
@@ -144,9 +149,11 @@ class Judge:
     jdg_ind = False
     jdg_bolin = False
     jdg_mov=False
+    jdg_mov_long=False
     jdg_mov_pfct=False
     jdg_mov_push=False
     jdg_rsi=False
+    jdg_rsi4=False
     jdg_macd=False
     jdg_brk=False
     jdg_berd=False
@@ -157,11 +164,13 @@ class Judge:
         
         self.jdg_candle = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_CAND))      # ローソク足判定
         self.jdg_ind = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_IND))          # 指標銘柄判定
-        self.jdg_mov = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV))          # 移動平均線判定
+        self.jdg_mov = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV))          # 中期移動平均線判定
+        self.jdg_mov_long = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV_LONG))# 長期移動平均線判定
         self.jdg_mov_pfct = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV_PFCT))# 移動平均線パーフェクトオーダー判定
         self.jdg_mov_push = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MOV_PUSH))# 移動平均線押し目判定
         self.jdg_bolin = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BOLIN))      # ボリンジャー判定
         self.jdg_rsi = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSI))          # RSI判定
+        self.jdg_rsi4 = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSI4))        # 短期RSI判定
         self.jdg_macd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MACD))        # MACD判定
         self.jdg_brk = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BRK))          # ブレイク判定
         self.jdg_berd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BERD))        # 髭判定
@@ -219,7 +228,7 @@ def backtst_proc(code, df_indicator, Prm):
         df['close'] = df['close'].astype('int64')
         df['volume'] = df['volume'].astype('int64')
         df['SMA5'] = df['close'].rolling(window=5).mean()               # 5日移動平均を追加
-        if (jg.jdg_mov == True) or (jg.jdg_ind == True) :    
+        if (jg.jdg_mov == True) or (jg.jdg_mov_long == True) or (jg.jdg_ind == True) :    
             df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
             df['SMASET'] = df['close'].rolling(window=Prm.lineave).mean()   # 設定した移動平均を追加
     except:
@@ -229,12 +238,14 @@ def backtst_proc(code, df_indicator, Prm):
     if len(df) == 0:
         return (-1)
     price = df["close"].values[-1]
-    # 最新価格が10000を超える株は対象外とする（資金的にまだ早い）
-    if price > 10000:
-        return (-1)
+    # # 最新価格が50000を超える株は対象外とする（資金的にまだ早い）
+    # LIMIT_PRICE = 3000
+    # if price > LIMIT_PRICE:
+    #     print("price over :" + str(price))
+    #     return (-1)
 
     #日付をインデックスにして、必要なアイテム順に並び替え
-    if (jg.jdg_mov == True) or (jg.jdg_ind == True) :    
+    if (jg.jdg_mov == True) or (jg.jdg_mov_long == True) or (jg.jdg_ind == True) :    
         df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA25","SMASET"]]
     else:
         df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5"]]
@@ -244,7 +255,6 @@ def backtst_proc(code, df_indicator, Prm):
     df_price["sell"] = 0
     df_price["sellgain"] = 0
     df_price["income"] = 0
-    
     # 指標銘柄も日付をインデックスにする
     #df_indicator= df_indicator.set_index("datetime").loc[:,["close","SMA5","SMA25","SMA75"]]
 
@@ -260,7 +270,10 @@ def backtst_proc(code, df_indicator, Prm):
             Prm.adopt_rsi = tc_rsi.search_proper_rsi(df_price, Prm.rsi_per)
         else:
             Prm.adopt_rsi = Prm.rsi_border
-
+    
+    # 短期RSI追加
+    if jg.jdg_rsi4 == True:
+        df_price = tc_rsi.rsi_tradingview(df_price, 4)	# Tradingviewで見るRSIに近い計算方法
     # ボリンジャーバンド追加
     if jg.jdg_bolin == True:
         df_price = tc_bb.Bollinger(df_price)
@@ -272,7 +285,11 @@ def backtst_proc(code, df_indicator, Prm):
     
     bkdf = pd.DataFrame()
     for row in df_price.itertuples():
-    
+        # 買いポジションがない状態かつ、現在値がリミット金額を超えている超えている場合は処理しない
+        LIMIT_PRICE = 3000
+        if ((row.close > LIMIT_PRICE) and (ti.buy_pos == 0)): 
+            return(-1)
+
         # 移動平均が算出可能な日付付近までスキップ
         wkdf= pd.DataFrame([row])
         
@@ -280,7 +297,7 @@ def backtst_proc(code, df_indicator, Prm):
         bkdf = pd.concat([bkdf, wkdf], ignore_index=True)
         
         lastidx_bk = len(bkdf) - 1
-        if (jg.jdg_mov == True) or (jg.jdg_ind == True) :    
+        if (jg.jdg_mov == True) or (jg.jdg_mov_long == True) or (jg.jdg_ind == True) :    
             if numpy.isnan(wkdf["SMASET"].values) == True:
                 continue
         else:
@@ -298,7 +315,7 @@ def backtst_proc(code, df_indicator, Prm):
 
         # 当日を取得
         idx_date = row[0]
-        if str(datetime.date(idx_date)) == '2022-01-18':
+        if str(datetime.date(idx_date)) == '2022-11-09':
             a = 1
    
         #----------------------
@@ -324,7 +341,8 @@ def backtst_proc(code, df_indicator, Prm):
         if jg.jdg_mov == True:
             cp.i_presma25 = cp.i_sma25
             cp.i_sma25 = row.SMA25                     # 25日移動平均値取得
-
+        if jg.jdg_mov_long == True:
+            cp.i_smaset = row.SMASET
         #----------------------
         # 指標銘柄判定
         #----------------------
@@ -408,30 +426,31 @@ def backtst_proc(code, df_indicator, Prm):
         #**************************************************************************************************
         # 購入判定
         #**************************************************************************************************
-        if ti.isreserved == False:
-            # 売買シグナル判定処理
-            jdg_rlt = judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate)
-            if jdg_rlt == False:
-                continue
-        else:
-            # 予約購入時判定を行う場合
-            if jg.jdg_rsvent == True:
-                # 翌日購入指定の時、買シグナルON時の終値よりも翌日の始値が低く始まった場合は購入しない
-                if ti.sb_mode == DEF.MODE_BUY:
-                    if i_close_pre1 >= cp.i_open:
-                        # 予約解除
-                        ti.isreserved = False
-                        continue
-                # 翌日購入指定の時、売シグナルON時の終値よりも翌日の始値が高く始まった場合は購入しない
-                if ti.sb_mode == DEF.MODE_SELL:
-                    if i_close_pre1 <= cp.i_open:
-                        # 予約解除
-                        ti.isreserved = False
-                        continue                
-        #**************************************************************************************************
-        # ここまで残ったものをエントリー対象とする。
-        #**************************************************************************************************
-        entry_proc(cp, ti, lst_codes, bkdf, lastidx_bk, idx_date, ent_timing)
+        if ti.buy_pos == 0:   # ポジションを既に持っている場合は実行しない      
+            if ti.isreserved == False:
+                # 売買シグナル判定処理
+                jdg_rlt = judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate)
+                if jdg_rlt == False:
+                    continue
+            else:
+                # 予約購入時判定を行う場合
+                if jg.jdg_rsvent == True:
+                    # 翌日購入指定の時、買シグナルON時の終値よりも翌日の始値が低く始まった場合は購入しない
+                    if ti.sb_mode == DEF.MODE_BUY:
+                        if i_close_pre1 >= cp.i_open:
+                            # 予約解除
+                            ti.isreserved = False
+                            continue
+                    # 翌日購入指定の時、売シグナルON時の終値よりも翌日の始値が高く始まった場合は購入しない
+                    if ti.sb_mode == DEF.MODE_SELL:
+                        if i_close_pre1 <= cp.i_open:
+                            # 予約解除
+                            ti.isreserved = False
+                            continue                
+            #**************************************************************************************************
+            # ここまで残ったものをエントリー対象とする。
+            #**************************************************************************************************
+            entry_proc(cp, ti, lst_codes, bkdf, lastidx_bk, idx_date, ent_timing)
 
     #========================
     # CSVに出力する情報を格納
@@ -535,10 +554,16 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholdday
         cnt_buyholddays += 1
         bkdf.loc[lastidx_bk, "mark"] = "継続"
 
-        # 危険な上髭判定
-        danger = judge_danger_upper(cp.i_close, cp.i_open, cp.i_high)
+        if ((jg.jdg_rsi4 == True) and (tc_rsi.jdg_rsi_shortkessai(ti.sb_mode, bkdf, Prm.srsi_hi) == True)):
+            # 短期RSI判定
+            ti.kessai_buy = True
+            buy_kessai_val = cp.i_close
+        # 長期線を下回ったら売り
+        # elif ((jg.jdg_rsi4 == True) and (cp.i_smaset > cp.i_close)):
+        #     ti.kessai_buy = True
+        #     buy_kessai_val = cp.i_close
         # 買い保持期間を-1にした場合は購入日翌日の始値で売り
-        if -1 == Prm.sell_period:
+        elif -1 == Prm.sell_period:
             ti.kessai_buy = True
             buy_kessai_val = cp.i_open
         # 買い保持期間を過ぎたら売り
@@ -549,21 +574,22 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholdday
 #            elif (cp.i_open < pre_low):
 #                ti.kessai_buy = True
 #                buy_kessai_val = cp.i_open                 # この時は始値を売値にする            
-        elif danger == True:
-            ti.kessai_buy = True
-            buy_kessai_val = cp.i_close
+        # 危険な上髭判定
+        # elif judge_danger_upper(cp.i_close, cp.i_open, cp.i_high) == True:
+        #     ti.kessai_buy = True
+        #     buy_kessai_val = cp.i_close
         # MACD < SIGで売りシグナル(MACDのデッドクロス)
-        elif (jg.jdg_macd == True) and (cp.i_macd <= cp.i_sig):
-            ti.kessai_buy = True
-            buy_kessai_val = cp.i_close
+        # elif (jg.jdg_macd == True) and (cp.i_macd <= cp.i_sig):
+        #     ti.kessai_buy = True
+        #     buy_kessai_val = cp.i_close
         # 終値が前日の安値を下回ったら売り
 #            elif pre_low > cp.i_close:
 #                ti.kessai_buy = True
 #                buy_kessai_val = cp.i_close
         # 5日移動平均より下回ったら売り
-        elif cp.i_sma5 > cp.i_close:
-            ti.kessai_buy = True
-            buy_kessai_val = cp.i_close
+        # elif cp.i_sma5 > cp.i_close:
+        #     ti.kessai_buy = True
+        #     buy_kessai_val = cp.i_close
         else:
             print(cp.code, ":", str(idx_date.date()), "継続")
 
@@ -674,10 +700,16 @@ def judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate):
             return False
 
     #----------------------
-    # 移動平均判定
+    # 長期移動平均判定
+    #----------------------
+    if jg.jdg_mov_long == True:
+        if tc_movave.jdg_longmovave_trend(ti.sb_mode, bkdf, cp.i_close) == 0:
+            return False
+    #----------------------
+    # 中期移動平均判定
     #----------------------
     if jg.jdg_mov == True:
-        if tc_movave.jdg_movave_trend(ti.sb_mode, bkdf) == 0:
+        if tc_movave.jdg_movave_trend(ti.sb_mode, bkdf, cp.i_close) == 0:
             return False
         #----------------------
         # パーフェクトオーダー判定
@@ -689,7 +721,7 @@ def judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate):
         # 押し目判定
         #----------------------
         if jg.jdg_mov_push == True:
-            if tc_movave.jdg_movave_Push(ti.sb_mode, bkdf, cp.i_close) == 0:
+            if tc_movave.jdg_movave_Push(ti.sb_mode, bkdf, cp.i_open, cp.i_close) == 0:
                 return False
 
     #----------------------
@@ -704,6 +736,15 @@ def judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate):
         # 過去指定期間でRSIが指定値を閾値を超えたらRSIシグナルスイッチを1にする
         if tc_rsi.jdg_rsi_entered(ti.sb_mode, dfrsi, Prm.adopt_rsi) == 0:
             return False
+
+    #----------------------
+    # 短期RSI判定
+    #----------------------
+    if jg.jdg_rsi4 == True:
+        # 短期RSI判定
+        if tc_rsi.jdg_rsi_short(ti.sb_mode, bkdf, Prm.srsi_low) == 0:
+            return False
+           
     #----------------------
     # MACD判定
     #----------------------
