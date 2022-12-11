@@ -260,6 +260,22 @@ def read_rec_all(conn, cursor, tbl):
 
     return df
 
+##########################################################################
+#   指定Codeのレコードを読みだす
+##########################################################################
+def read_code_record(conn, cursor, code):
+    """
+    select * ですべてのデータを参照し、fromでどのテーブルからデータを呼ぶのか指定
+    fetchallですべての行のデータを取り出す
+    """
+    sql = 'SELECT * FROM ' + 'tbl_codelist ' + 'WHERE ' + 'Code = ' + '"' + code + '"'
+    cursor.execute(sql)
+    #df = pd.read_sql(sql, conn)
+    for cd in cursor.fetchall():
+        name = cd[1]
+        sangyou = cd[3]
+#    coderec = [cd[0] for cd in cursor.fetchall()]
+    return name, sangyou
 
 ##########################################################################
 #   全銘柄コードリスト取得

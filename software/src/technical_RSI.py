@@ -153,26 +153,32 @@ def jdg_rsi_entered(sb_mode, dfrsi, limit_rsi):
 #     : df       データフレーム
 # 戻り値：0=売買シグナルなし, 1=売買シグナルあり
 #################################################################
-def jdg_rsi_short(sb_mode, df, srsi_low ):
+def jdg_rsi_short(sb_mode, df, srsi_low, jdg_rsi4rev):
     sigsw_rsi = 0
     taildf = df.tail(5)
 
-    rsi4 = taildf["RSI4"].values[-1]      # 当日短期RSI
+    rsi4 = taildf["RSI4"].values[-1]        # 当日短期RSI
     rsi4_pre1 = taildf["RSI4"].values[-2]   # 前日短期RSI
 
     # 買いシグナル判定
     if sb_mode == DEF.MODE_BUY:
-        if (rsi4 < srsi_low):
-            sigsw_rsi = 1
-        # if (rsi4_pre1 < srsi_low):
-        #     if (rsi4_pre1 < rsi4):
-        #         sigsw_rsi = 1
+        if(jdg_rsi4rev == 1):
+            if (rsi4 < srsi_low):             # 当日RSIが下限を下回った
+                sigsw_rsi = 1
+        else:
+            if (rsi4_pre1 < srsi_low):          # 前日RSIが下限RSIを下回った
+                if (rsi4_pre1 < rsi4):          # 前日より当日RSIが高い
+                    if (rsi4 < 40):             # 当日RSIが40未満   
+                        sigsw_rsi = 1
     # 売りシグナル判定
     elif sb_mode == DEF.MODE_SELL:
-#        if (rsi4_pre1 > rsi4):
-        if (rsi4_pre1 > (100 - srsi_low)):
+        if(jdg_rsi4rev == 1):
             if (rsi4_pre1 > rsi4):
                 sigsw_rsi = 1
+        else:
+            if (rsi4_pre1 > (100 - srsi_low)):
+                if (rsi4_pre1 > rsi4):
+                    sigsw_rsi = 1
 
     return sigsw_rsi   
 #################################################################
@@ -181,20 +187,22 @@ def jdg_rsi_short(sb_mode, df, srsi_low ):
 #     : df       データフレーム
 # 戻り値：True=決済する, False=決済しない
 #################################################################
-def jdg_rsi_shortkessai(sb_mode, df, srsi_hi):
+def jdg_rsi_shortkessai(sb_mode, df, srsi_hi, srsi_low ):
     sigsw_rsi = False
     taildf = df.tail(5)
     rsi4 = taildf["RSI4"].values[-1]      # 当日短期RSI
     rsi4_pre1 = taildf["RSI4"].values[-2]   # 前日短期RSI
 
-    # 買いシグナル判定
+    # 買いエントリー時の決済シグナル判定
     if sb_mode == DEF.MODE_BUY:
-#        if (rsi4_pre1 > rsi4):
-            if (srsi_hi < rsi4):
-                sigsw_rsi = True
-    # 売りシグナル判定
+        if (srsi_hi < rsi4):    # 上限を超えたら利確
+            sigsw_rsi = True
+#        if (srsi_low > rsi4):   # ポジション保持中に再度下限を超えたら損切
+#            sigsw_rsi = True
+    # 売りエントリー時の決済シグナル判定
     elif sb_mode == DEF.MODE_SELL:
-#        if (rsi4_pre1 < rsi4):
+        if (srsi_low < rsi4):
+            sigsw_rsi = True
         if (100 - srsi_hi > rsi4):
             sigsw_rsi = True
 

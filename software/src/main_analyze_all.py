@@ -12,7 +12,7 @@ import sys
 ############################################
 # 結果をCSVファイルに書き込む
 ############################################
-def write_csv(dt, kekka_path):
+def write_csv(dt, kekka_path, coderec):
     if dt.entrycnt != 0:
         winrate = bktst.KabInf.get_winrate(dt)
         wlstr = "_rsi"+ str(dt.adopt_rsi) + \
@@ -20,7 +20,9 @@ def write_csv(dt, kekka_path):
                 "_" + str(winrate) + "%_YEN" + str(dt.income) + \
                 "_PF" + str(dt.pf) + \
                 "_pg" + str(dt.plusgain) + \
-                "_mg" + str(dt.minusgain)
+                "_mg" + str(dt.minusgain) + \
+                "_" + coderec[0].replace('\uff0d', '-') + \
+                "_" + coderec[1].replace('\uff0d', '-') + "_"
                     
         dt.outdf.to_csv(kekka_path + "/code" + str(code) + wlstr + ".csv", encoding="shift_jis")    
 
@@ -83,7 +85,8 @@ for offset in range(1):
                             rsi_max = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_RSI_MAX)), 
                             rsi_per = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_RSI_PER)),
                             srsi_hi = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SRSI_HI)),
-                            srsi_low = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SRSI_LOW)))
+                            srsi_low = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SRSI_LOW)),
+                            ent_rest = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_ENTRY_REST)))
 
     #--------------------------
     # 結果格納フォルダパス取得
@@ -147,8 +150,11 @@ for offset in range(1):
         if result == -1:
             continue
 
+        # コードのレコード情報を取得
+        coderec = db.read_code_record(cursor, cursor, code)
+
         # CSVに出力
-        write_csv(cls_dt, kekka_path)
+        write_csv(cls_dt, kekka_path, coderec)
 
         # 単発処理が有効な場合は1回でループを抜ける
         if oneshot_code != 0:

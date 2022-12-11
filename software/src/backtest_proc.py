@@ -30,7 +30,7 @@ class KabInf:
     #****************************
     # 初期処理
     #****************************
-    def __init__(self, lineave=200, break_offset=0, macd_offset=0, rsi_border=30, rsi_per=25, rsi_max=59, rsi_period=10, breakout=5, sell_period=3, past_period=(-1200), srsi_hi=70, srsi_low=30):
+    def __init__(self, lineave=200, break_offset=0, macd_offset=0, rsi_border=30, rsi_per=25, rsi_max=59, rsi_period=10, breakout=5, sell_period=3, past_period=(-1200), srsi_hi=70, srsi_low=30, ent_rest=0):
         self.lineave = lineave                  # 買いシグナルに使用する長期移動平均線(上昇時に買)
         self.macd_offset = macd_offset          # MACDとシグナルの開き
         self.break_offset = break_offset        # ブレイクアウトオフセット。上限を何%超えたか。(1/100で計算)
@@ -43,6 +43,7 @@ class KabInf:
         self.past_period = past_period          # 過去何日前までのチャートを使用するか
         self.srsi_hi = srsi_hi                  # 短期RSIの上限値(決済判定ポイント)
         self.srsi_low = srsi_low                # 短期RSIの下限値(エントリー判定ポイント)
+        self.ent_rest = ent_rest                # 決済後、再エントリーまでの休止営業日数
     #****************************
     # 勝率を取得する
     #****************************
@@ -154,6 +155,7 @@ class Judge:
     jdg_mov_push=False
     jdg_rsi=False
     jdg_rsi4=False
+    jdg_rsi4rev=False
     jdg_macd=False
     jdg_brk=False
     jdg_berd=False
@@ -171,6 +173,7 @@ class Judge:
         self.jdg_bolin = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BOLIN))      # ボリンジャー判定
         self.jdg_rsi = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSI))          # RSI判定
         self.jdg_rsi4 = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSI4))        # 短期RSI判定
+        self.jdg_rsi4rev = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSI4REV))  # 短期RSI反転判定
         self.jdg_macd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_MACD))        # MACD判定
         self.jdg_brk = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BRK))          # ブレイク判定
         self.jdg_berd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BERD))        # 髭判定
@@ -202,7 +205,7 @@ def backtst_proc(code, df_indicator, Prm):
     i_presma25 = 0
     ti.isreserved = False         # 予約(True：エントリー予約あり、False：なし)
     idx_date = NULL
-
+    iBuyRestCount = 0
     req_sb_mode = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SELLBUY))       # 売買モード
     ent_timing = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_ENT_TIMING))     # エントリータイミング
 
@@ -286,7 +289,7 @@ def backtst_proc(code, df_indicator, Prm):
     bkdf = pd.DataFrame()
     for row in df_price.itertuples():
         # 買いポジションがない状態かつ、現在値がリミット金額を超えている超えている場合は処理しない
-        LIMIT_PRICE = 3000
+        LIMIT_PRICE = 8000
         if ((row.close > LIMIT_PRICE) and (ti.buy_pos == 0)): 
             return(-1)
 
@@ -304,6 +307,8 @@ def backtst_proc(code, df_indicator, Prm):
             if numpy.isnan(wkdf["SMA5"].values) == True:
                 continue
 
+        if iBuyRestCount > 0:
+            iBuyRestCount -= 1
         #----------------------
         # 日付取得
         #----------------------
@@ -421,12 +426,13 @@ def backtst_proc(code, df_indicator, Prm):
         #==============================================================================================
         # 売却処理
         #==============================================================================================
-        cnt_buyholddays = kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholddays)
+        cnt_buyholddays, iBuyRestCount = kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholddays, iBuyRestCount)
         
         #**************************************************************************************************
         # 購入判定
         #**************************************************************************************************
-        if ti.buy_pos == 0:   # ポジションを既に持っている場合は実行しない      
+        # ポジションを既に持っている場合は実行しない。買い休止カウントが0でない場合も購入しない。   
+        if ti.buy_pos == 0 and iBuyRestCount == 0:      
             if ti.isreserved == False:
                 # 売買シグナル判定処理
                 jdg_rlt = judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate)
@@ -490,7 +496,7 @@ def backtst_proc(code, df_indicator, Prm):
 # 引数：cp  株価情報クラス
 # 戻り値：なし
 #################################################################
-def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholddays):
+def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholddays, RestCount):
     #-----------------------
     # 売りポジションがある時	(※現状は翌日始値売りにのみ対応)
     #-----------------------
@@ -544,6 +550,7 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholdday
                     cp.minusgain += wkgain
 
             bkdf.loc[lastidx_bk, "mark"] = "返買"
+            RestCount = Prm.ent_rest
 
     #-----------------------
     # 買いポジションがある時
@@ -554,14 +561,14 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholdday
         cnt_buyholddays += 1
         bkdf.loc[lastidx_bk, "mark"] = "継続"
 
-        if ((jg.jdg_rsi4 == True) and (tc_rsi.jdg_rsi_shortkessai(ti.sb_mode, bkdf, Prm.srsi_hi) == True)):
+        if ((jg.jdg_rsi4 == True) and (tc_rsi.jdg_rsi_shortkessai(ti.sb_mode, bkdf, Prm.srsi_hi, Prm.srsi_low) == True)):
             # 短期RSI判定
             ti.kessai_buy = True
             buy_kessai_val = cp.i_close
-        # 長期線を下回ったら売り
-        # elif ((jg.jdg_rsi4 == True) and (cp.i_smaset > cp.i_close)):
-        #     ti.kessai_buy = True
-        #     buy_kessai_val = cp.i_close
+        # 長期線を下回ったら売り(1%以上下回ったら)
+        elif ((jg.jdg_mov_long == True) and (cp.i_smaset > (cp.i_close + (cp.i_close * 0.01) ))):
+            ti.kessai_buy = True
+            buy_kessai_val = cp.i_close
         # 買い保持期間を-1にした場合は購入日翌日の始値で売り
         elif -1 == Prm.sell_period:
             ti.kessai_buy = True
@@ -627,6 +634,7 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholdday
                     cp.minusgain += wkgain
 
             bkdf.loc[lastidx_bk, "mark"] = "返売"
+            RestCount = Prm.ent_rest
 
     #----------------------
     # 売買数と利益を出力
@@ -637,7 +645,7 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholdday
     bkdf.loc[lastidx_bk, "sellgain"] = sellgain
     bkdf.loc[lastidx_bk, "income"] = ti.income
 
-    return cnt_buyholddays
+    return cnt_buyholddays, RestCount
 
 #################################################################
 # 売買シグナル判定処理
@@ -742,7 +750,7 @@ def judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate):
     #----------------------
     if jg.jdg_rsi4 == True:
         # 短期RSI判定
-        if tc_rsi.jdg_rsi_short(ti.sb_mode, bkdf, Prm.srsi_low) == 0:
+        if tc_rsi.jdg_rsi_short(ti.sb_mode, bkdf, Prm.srsi_low, jg.jdg_rsi4rev) == 0:
             return False
            
     #----------------------

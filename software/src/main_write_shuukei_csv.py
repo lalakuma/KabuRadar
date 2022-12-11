@@ -40,8 +40,10 @@ def decide_trade(DirPath):
         # 「code」がないファイルはパス
         if poscode == -1:
             continue
-        code = file_[poscode+4:poscode+8]
-        df["code"] = code
+        arr = file_.split('_')
+        df["code"] = arr[0][-4:]    # 銘柄コードを追加
+        df["name"] = arr[8]         # 銘柄名称を追加
+        df["sangyou"] = arr[9]      # 産業名を追加
         list_.append(df)
     
     if len(list_) == 0:
@@ -57,7 +59,7 @@ def decide_trade(DirPath):
     df_con = df_con.reset_index()
     df_con = pd.merge(df_con, df_set, on='code')            # tbl_code_setとマージ
     df_con = df_con.sort_values("Index", ascending=True)    # 日付順にソート
-    df_con = df_con.loc[:,["Index","code","open","close","PF","mark","buygain","sellgain","income"]]
+    df_con = df_con.loc[:,["Index","code","open","close","PF","mark","buygain","sellgain","income","name","sangyou"]]
     df_con = df_con.reset_index(drop=True)
     #選別　（お試し用）
     daytotal = 0
@@ -146,7 +148,7 @@ def decide_trade(DirPath):
 #################################################################
 def shuukei_makeExl(shuukei_path, stance):
     fileShukei = "集計_" + stance + ".xlsx"
-    # トレード決定処理
+    # トレード銘柄決定処理
     df_con, lst_data = decide_trade(shuukei_path)
     if len(lst_data) == 0:
         print("集計対象ファイルがありません。")
@@ -233,7 +235,8 @@ def shuukei_toCsv(shuukei_path):
             # 利益と損失を取得
             wk_pgain = int((arr[6])[2:])
             total_pgain += wk_pgain
-            wk_mgain = abs(int(((arr[7])[:-4])[2:]))
+#            wk_mgain = abs(int(((arr[7])[:-4])[2:]))
+            wk_mgain = abs(int((arr[7])[2:]))
             total_mgain += wk_mgain
 
             # win lose の累積件数を取得
@@ -241,22 +244,22 @@ def shuukei_toCsv(shuukei_path):
             lpos = strwl.find('L')
             cnt_win += int(strwl[1:lpos])
             cnt_lose += int(strwl[lpos + 1:])
-            dic = {'code':arr[1], 
-                            'code':(arr[0])[4:], 
-                            'rsi':(arr[1])[3:], 
-                            'winlose':strwl, 
-                            'winPer':int((arr[3])[:-1]), 
-                            'incomes':int((arr[4])[3:]), 
-                            'pg':wk_pgain, 
-                            'mg':wk_mgain, 
-                            'pf':wk_pf}
+            dic = {'code':(arr[0])[4:], 
+                   'rsi':(arr[1])[3:], 
+                   'winlose':strwl, 
+                   'winPer':int((arr[3])[:-1]), 
+                   'incomes':int((arr[4])[3:]), 
+                   'pg':wk_pgain, 
+                   'mg':wk_mgain, 
+                   'pf':wk_pf,
+                   'name':arr[8],
+                   'sangyou':arr[9]}
             dfdic = pd.DataFrame(dic, index=['i',])
             df = pd.concat( [df, dfdic], ignore_index=True)
 
     if len(df) > 0 :
-        print(df)
         #日付をインデックスにして、必要なアイテム順に並び替え
-        df = df.set_index("code").loc[:,["pf","pg","mg","incomes","winlose","winPer","rsi"]]
+        df = df.set_index("code").loc[:,["pf","pg","mg","incomes","winlose","winPer","rsi","name","sangyou"]]
         fWinPer = (cnt_win / (cnt_win + cnt_lose)) * 100
 #        strWinPer = "rate" + '{:.1f}'.format(df['winPer'].mean())
         strWinPer = "rate" + '{:.2f}'.format(fWinPer)
@@ -309,8 +312,9 @@ def create_pivottable(skfilepath):
     wb.Close(True)
     excel.Quit()
 
-#shuukei_toCsv('..\\..\\output\\honban\\')
+# shuukei_toCsv('..\\..\\output\\honban\\')
 # sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST')
+# skfilepath = '..\\..\\output\\honban\\集計_TST.xlsx'
 # create_pivottable(skfilepath)
 
 
