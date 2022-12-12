@@ -25,6 +25,19 @@ echo 株価取得
 rem 'APIで最新の株価を取得してデータベースに保存
 call C:\MorinoFolder\Python\KabuRadar\software\src\main_entry_kabukom_price.py
 
+rem '-------------------------------------------
+rem ' スクリーニング2回目 明日買い候補
+rem '-------------------------------------------
+rem '低勝率高回転パラメータに変更 (RSI上昇を確認できたら買い)
+call C:\MorinoFolder\Python\KabuRadar\software\src\main_param_chg.py LO
+
+rem 'スクリーニング開始
+call C:\MorinoFolder\Python\KabuRadar\software\src\main_analyze_all.py LO
+
+rem 'LINE通知 ＆ auカブコム証券で売買
+call C:\MorinoFolder\Python\KabuRadar\software\src\main_kabustation_trade.py LO
+
+
 rem '*******************************************************
 rem ' 決済処理開始
 rem '*******************************************************
