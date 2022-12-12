@@ -94,9 +94,17 @@ else:
 # パラメータ取得
 #----------------------------------------
 kekka_path = conf.get_config(conf.CONF_SEC_SHUUKEI, conf.CONF_KEY_PATH_HONBAN)
+jdg_rsi4 = conf.get_config(conf.CONF_SEC_SCR, conf.CONF_KEY_JDG_RSI4)
+jdg_rsi4rev = conf.get_config(conf.CONF_SEC_SCR, conf.CONF_KEY_JDG_RSI4REV)
 df, lst_shuukei = shuukei.decide_trade(kekka_path)
 
 lst_trade = []
+
+if jdg_rsi4 == '1':
+    if jdg_rsi4rev == '1':
+        stance = "今が買い"
+    else:
+        stance = "後日上昇で買い"
 
 #----------------------------------------
 # LOG設定
@@ -115,7 +123,7 @@ logger.info("処理 main_kabustation_trade を開始します。")
 for trd in lst_shuukei:
     # 今日の日付を取得
     strtoday = str(datetime.date.today())
-#    strtoday = '2021-10-01'
+#    strtoday = '2022-12-09'
 
     # 取引日付を取得
     trddate = trd["_1"]
@@ -132,8 +140,9 @@ if iWeek != 6 and iWeek != 7:            #土日以外
     #----------------------------------------
     lst_linenoti = []
     for trd in lst_trade:
-        if trd["mark"] == "新買" or trd["mark"] == "新売" or trd["mark"] == "買シ" or trd["mark"] == "売シ":
-            lst_linenoti.append("[" + str(trd["code"]) + "]" + trd["mark"] + " PF:" + str(trd["PF"]) + " ¥{:,d}".format(trd["close"]))
+        if trd["mark"] == "新買" or trd["mark"] == "新売" or trd["mark"] == "買シ" or trd["mark"] == "売シ" or trd["mark"] == "返売" or trd["mark"] == "返買":
+#            lst_linenoti.append("[" + str(trd["code"]) + "]" + trd["mark"] + " PF:" + str(trd["PF"]) + " ¥{:,d}".format(trd["close"]) + " " + trd["name"])
+            lst_linenoti.append("[" + str(trd["code"]) + "]" + trd["mark"] + " ¥{:,d}".format(trd["close"]) + " " + trd["name"])
 
     line.line_notify(lst_linenoti, stance)
 

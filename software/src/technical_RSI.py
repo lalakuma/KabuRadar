@@ -156,13 +156,12 @@ def jdg_rsi_entered(sb_mode, dfrsi, limit_rsi):
 def jdg_rsi_short(sb_mode, df, srsi_low, jdg_rsi4rev):
     sigsw_rsi = 0
     taildf = df.tail(5)
-
     rsi4 = taildf["RSI4"].values[-1]        # 当日短期RSI
     rsi4_pre1 = taildf["RSI4"].values[-2]   # 前日短期RSI
 
     # 買いシグナル判定
     if sb_mode == DEF.MODE_BUY:
-        if(jdg_rsi4rev == 1):
+        if(jdg_rsi4rev == 0):
             if (rsi4 < srsi_low):             # 当日RSIが下限を下回った
                 sigsw_rsi = 1
         else:
@@ -172,7 +171,7 @@ def jdg_rsi_short(sb_mode, df, srsi_low, jdg_rsi4rev):
                         sigsw_rsi = 1
     # 売りシグナル判定
     elif sb_mode == DEF.MODE_SELL:
-        if(jdg_rsi4rev == 1):
+        if(jdg_rsi4rev == 0):
             if (rsi4_pre1 > rsi4):
                 sigsw_rsi = 1
         else:
