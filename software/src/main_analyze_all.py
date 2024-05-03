@@ -13,7 +13,8 @@ import sys
 # 結果をCSVファイルに書き込む
 ############################################
 def write_csv(dt, kekka_path, coderec):
-    if dt.entrycnt != 0:
+#    if dt.entrycnt != 0:
+    if dt.outcodecsv == True:
         winrate = bktst.KabInf.get_winrate(dt)
         wlstr = "_rsi"+ str(dt.adopt_rsi) + \
                 "_W" + str(dt.win) + "L" + str(dt.lose) + \

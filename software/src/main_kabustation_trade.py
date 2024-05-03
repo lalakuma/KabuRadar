@@ -123,7 +123,6 @@ logger.info("処理 main_kabustation_trade を開始します。")
 for trd in lst_shuukei:
     # 今日の日付を取得
     strtoday = str(datetime.date.today())
-#    strtoday = '2022-12-09'
 
     # 取引日付を取得
     trddate = trd["_1"]
@@ -140,9 +139,13 @@ if iWeek != 6 and iWeek != 7:            #土日以外
     #----------------------------------------
     lst_linenoti = []
     for trd in lst_trade:
-        if trd["mark"] == "新買" or trd["mark"] == "新売" or trd["mark"] == "買シ" or trd["mark"] == "売シ" or trd["mark"] == "返売" or trd["mark"] == "返買":
+        if trd["mark"] == "新買" or trd["mark"] == "新売" or trd["mark"] == "買シ" or trd["mark"] == "売シ":
 #            lst_linenoti.append("[" + str(trd["code"]) + "]" + trd["mark"] + " PF:" + str(trd["PF"]) + " ¥{:,d}".format(trd["close"]) + " " + trd["name"])
-            lst_linenoti.append("[" + str(trd["code"]) + "]" + trd["mark"] + " ¥{:,d}".format(trd["close"]) + " " + trd["name"])
+            lst_linenoti.append("[" + str(trd["code"]) + "]" + trd["mark"] + "¥{:,d}".format(trd["close"]) + " " + trd["name"])
+        elif  trd["mark"] == "返売":
+            lst_linenoti.append("[" + str(trd["code"]) + "]" + trd["mark"] + "¥{:,d}".format(trd["close"]) + " 利益" + "¥{:,d}".format(trd["buygain"]) + " " + trd["name"])
+        elif  trd["mark"] == "返買":
+            lst_linenoti.append("[" + str(trd["code"]) + "]" + trd["mark"] + "¥{:,d}".format(trd["close"]) + " 利益" + "¥{:,d}".format(trd["sellgain"]) + " " + trd["name"])
 
     line.line_notify(lst_linenoti, stance)
 

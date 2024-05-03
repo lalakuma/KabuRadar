@@ -11,12 +11,15 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.formatting.rule import CellIsRule, FormulaRule
 import getConfig as conf
 import win32com.client as win32
-import os
+import getConfig as conf
+import shutil
 win32c = win32.constants
 #################################################################
 # トレード銘柄決定処理
 #################################################################
 def decide_trade(DirPath):
+    scrsec = conf.CONF_SEC_SCR
+    sell_period = int(conf.get_config(scrsec, conf.CONF_KEY_SCR_SELL_PERIOD))
     # DBに接続
     conn, cursor = db.connect_db()
     df_set = db.read_rec_all(conn, cursor, "tbl_code_set")
@@ -34,7 +37,7 @@ def decide_trade(DirPath):
 
     # フォルダ内のファイルを全て処理する
     for file_ in allFiles:
-        df = pd.read_csv(file_, encoding="ms932", sep=",")    
+        df = pd.read_csv(file_, encoding="ms932", sep=",")   
         # 文字列「code」を検索
         poscode = file_.find("code")
         # 「code」がないファイルはパス
@@ -44,8 +47,9 @@ def decide_trade(DirPath):
         df["code"] = arr[0][-4:]    # 銘柄コードを追加
         df["name"] = arr[8]         # 銘柄名称を追加
         df["sangyou"] = arr[9]      # 産業名を追加
+        df["latent"] = 0            # 含み益を追加
         list_.append(df)
-    
+
     if len(list_) == 0:
         print("集計対象ファイルが見つかりません")
         return df, list_
@@ -59,7 +63,7 @@ def decide_trade(DirPath):
     df_con = df_con.reset_index()
     df_con = pd.merge(df_con, df_set, on='code')            # tbl_code_setとマージ
     df_con = df_con.sort_values("Index", ascending=True)    # 日付順にソート
-    df_con = df_con.loc[:,["Index","code","open","close","PF","mark","buygain","sellgain","income","name","sangyou"]]
+    df_con = df_con.loc[:,["Index","code","open","close","PF","mark","buygain","sellgain","latent","income","name","sangyou"]]
     df_con = df_con.reset_index(drop=True)
     #選別　（お試し用）
     daytotal = 0
@@ -82,11 +86,11 @@ def decide_trade(DirPath):
         # 日付が一致するものを抽出
         df_samedate = (df_con[df_con["Index"].str.contains(date[:10])])
         df_samedate = df_samedate.sort_values("PF", ascending=False)    # 高PF順
-
         # 同一日付内でループ
         for samerow in df_samedate.itertuples():
             # 条件によってmarkを変更したいのでタプルではなく辞書に変換
             dic_row = samerow._asdict()
+#            print(dic_row)
             #--------------------#
             # エントリー側の判定
             #--------------------#
@@ -95,7 +99,7 @@ def decide_trade(DirPath):
                 wktotal += dic_row["close"]                # 一時トータルに終値加算
 
                 # トータル10000(買値が100万円)以内なら購入対象として追加
-                if wktotal < 10000:                     # 一時トータルで比較
+                if wktotal < 20000:                     # 一時トータルで比較
 #                if wktotal < 5000:                     # 一時トータルで比較
                     lst_tdyBuy.append(dic_row["code"])  # 当日購入リストにコードを追加
                     lst_data.append(dic_row)            # データリストに追加
@@ -105,18 +109,24 @@ def decide_trade(DirPath):
             #--------------------#
             # 決済側の判定
             #--------------------#
-            # 前日リストの中にcodeがあるか検索（前日購入済みの株かどうか）
-            findcode = dic_row["code"] in lst_PreBuy
-            # 見つけたら集計リストに追加
-            if findcode == True:
-                # 当日購入リストにあるか判定
-                tdyfindcode = dic_row["code"] in lst_tdyBuy
-                # 既に購入リスト側に追加されている場合は重複になってしまうので追加しない
-                if tdyfindcode == False:
-                    lst_data.append(dic_row)
-                    dic_row['mark'] = "決済"       # 購入はないので決済のみに書き換え
-                else:
-                    dic_row['mark'] = "決済+" + dic_row['mark']
+            if dic_row["mark"] == "返買" or dic_row["mark"] == "返売":
+                lst_data.append(dic_row)
+
+                # 前日リストの中にcodeがあるか検索（前日購入済みの株かどうか）
+                # findcode = dic_row["code"] in lst_PreBuy
+
+                # if sell_period == 0:
+                #     findcode = True
+                # # 見つけたら集計リストに追加
+                # if findcode == True:
+                #     # 当日購入リストにあるか判定
+                #     tdyfindcode = dic_row["code"] in lst_tdyBuy
+                #     # 既に購入リスト側に追加されている場合は重複になってしまうので追加しない
+                #     if tdyfindcode == False:
+                #         lst_data.append(dic_row)
+                #         dic_row['mark'] = "決済"       # 購入はないので決済のみに書き換え
+                #     else:
+                #         dic_row['mark'] = "決済+" + dic_row['mark']
         
             #----------------------------#
             # 決済がなければ利益を0にする
@@ -150,6 +160,34 @@ def shuukei_makeExl(shuukei_path, stance):
     fileShukei = "集計_" + stance + ".xlsx"
     # トレード銘柄決定処理
     df_con, lst_data = decide_trade(shuukei_path)
+
+    #継続に含み益を入力
+    # 各codeごとに処理を行います
+    for code in df_con['code'].unique():
+        # 同一codeのデータを取得します
+        data = df_con[df_con['code'] == code]
+        # 'mark'が'新買'の行の'close'を取得します
+        buy_value = data[data['mark'] == '新買']['close'].values[0]
+        # 'mark'が'継続'の行について、'close'と買い値との差分を'latent'に設定します
+        df_con.loc[(df_con['code'] == code) & (df_con['mark'] == '継続'), 'latent'] = (data[data['mark'] == '継続']['close'] - buy_value) * 100
+    
+    # income列に当日のbuygainと当日のsellgainと前日までのincomeの合計を入力します
+    df_con['income'] = (df_con['buygain'] + df_con['sellgain']).cumsum()
+                  
+    pd.set_option('display.max_rows', 900)
+    print(df_con)
+
+    # DBに接続
+    conn, cursor = db.connect_db()
+    db.delete_tbl(conn, "TradeHist")
+    db.create_tradehist(conn, cursor)
+    # TradeHistテーブルのレコード全削除
+    db.delete_all_records(conn, "TradeHist")
+    # エクセルと同じ内容をTradeHistテーブルに保存
+    db.insert_data_from_df_to_db(conn, df_con)
+    # DBクローズ
+    db.close_db(conn)
+    print(df_con)
     if len(lst_data) == 0:
         print("集計対象ファイルがありません。")
         return 0,"",0
@@ -170,37 +208,44 @@ def shuukei_makeExl(shuukei_path, stance):
         ws.column_dimensions['F'].width =10
         ws.auto_filter.ref = ws.dimensions
         ws['B1'] = 'date'
-        for row, cellObj in enumerate(list(ws.columns)[9]): # セル(J列)に累積計算関数を書き込む
+        ws.cell(row=1,column=1).value = 'Index'
+        for row, cellObj in enumerate(list(ws.columns)[10]): # セル(J列)に累積計算関数を書き込む
             if row == 0:
                 continue
-            n = '=IF(ISNUMBER(J' + str(row) + '),J' + str(row) + '+H' + str(row+1) + '+I' + str(row+1) + ',0)'
-            cellObj.value = n
+            # n = '=IF(ISNUMBER(J' + str(row) + '),J' + str(row) + '+H' + str(row+1) + '+I' + str(row+1) + ',0)'
+            # cellObj.value = n
 
-    if(len(dfreal) > 0):
-        ws1 = wb.worksheets[1]                  # [Sheet2]
-        ws1.column_dimensions['B'].width =22
-        ws1.column_dimensions['F'].width =10
-        ws1.auto_filter.ref = ws1.dimensions
-        ws1['B1'] = 'date'
-        for row, cellObj in enumerate(list(ws1.columns)[9]): # セル(J列)に累積計算関数を書き込む
-            if row == 0:
-                continue
-            n = '=IF(ISNUMBER(J' + str(row) + '),J' + str(row) + '+H' + str(row+1) + '+I' + str(row+1) + ',0)'
-            cellObj.value = n
+            ws.cell(row+1,column=14).value = '=YEAR(B' + str(row+1) + ')'
+            ws.cell(row+1,column=15).value = '=MONTH(B' + str(row+1) + ')'
 
-            ws1.cell(row+1,column=11).value = '=YEAR(B' + str(row+1) + ')'
-            ws1.cell(row+1,column=12).value = '=MONTH(B' + str(row+1) + ')'
+        ws.cell(row=1,column=14).value = '年'
+        ws.cell(row=1,column=15).value = '月'
 
-        ws1.cell(row=1,column=11).value = '年'
-        ws1.cell(row=1,column=12).value = '月'
+    # if(len(dfreal) > 0):
+    #     ws1 = wb.worksheets[1]                  # [Sheet2]
+    #     ws1.column_dimensions['B'].width =22
+    #     ws1.column_dimensions['F'].width =10
+    #     ws1.auto_filter.ref = ws1.dimensions
+    #     ws1['B1'] = 'date'
+    #     for row, cellObj in enumerate(list(ws1.columns)[9]): # セル(J列)に累積計算関数を書き込む
+    #         if row == 0:
+    #             continue
+    #         # n = '=IF(ISNUMBER(J' + str(row) + '),J' + str(row) + '+H' + str(row+1) + '+I' + str(row+1) + ',0)'
+    #         # cellObj.value = n
 
-        # セルの色を設定
-        fmtarea = 'F2:F' + str(row + 1)
-        gray_fill = PatternFill(bgColor='FF99FF', fill_type='solid')
-        formula_rule1 = FormulaRule(formula=['$F2="新買"'], fill=gray_fill)
-        formula_rule2 = FormulaRule(formula=['$F2="決済+新買"'], fill=gray_fill)
-        ws1.conditional_formatting.add(fmtarea, formula_rule1)
-        ws1.conditional_formatting.add(fmtarea, formula_rule2)
+    #         ws1.cell(row+1,column=11).value = '=YEAR(B' + str(row+1) + ')'
+    #         ws1.cell(row+1,column=12).value = '=MONTH(B' + str(row+1) + ')'
+
+    #     ws1.cell(row=1,column=11).value = '年'
+    #     ws1.cell(row=1,column=12).value = '月'
+
+    #     # セルの色を設定
+    #     fmtarea = 'F2:F' + str(row + 1)
+    #     gray_fill = PatternFill(bgColor='FF99FF', fill_type='solid')
+    #     formula_rule1 = FormulaRule(formula=['$F2="新買"'], fill=gray_fill)
+    #     formula_rule2 = FormulaRule(formula=['$F2="決済+新買"'], fill=gray_fill)
+    #     ws1.conditional_formatting.add(fmtarea, formula_rule1)
+    #     ws1.conditional_formatting.add(fmtarea, formula_rule2)
 
     if(len(df_con) > 0):
         wb.save(filepath)
@@ -260,7 +305,10 @@ def shuukei_toCsv(shuukei_path):
     if len(df) > 0 :
         #日付をインデックスにして、必要なアイテム順に並び替え
         df = df.set_index("code").loc[:,["pf","pg","mg","incomes","winlose","winPer","rsi","name","sangyou"]]
-        fWinPer = (cnt_win / (cnt_win + cnt_lose)) * 100
+        if cnt_win == 0:
+            fWinPer = 0
+        else:
+            fWinPer = (cnt_win / (cnt_win + cnt_lose)) * 100
 #        strWinPer = "rate" + '{:.1f}'.format(df['winPer'].mean())
         strWinPer = "rate" + '{:.2f}'.format(fWinPer)
         print(strWinPer)
@@ -290,8 +338,8 @@ def create_pivottable(skfilepath):
     wb = excel.Workbooks.Open(fpath)
 
     ## Sheet 1 指定し､フィルターを有効にする
-#    wbs1 = wb.Sheets('-下')
-    wbs1 = wb.Sheets('1日10000以下')
+    wbs1 = wb.Sheets('全コード結合')
+#    wbs1 = wb.Sheets('1日10000以下')
 
     ## ピボットテーブルの作成
     wbs2_name = 'pivot'
@@ -312,12 +360,12 @@ def create_pivottable(skfilepath):
     wb.Close(True)
     excel.Quit()
 
-# shuukei_toCsv('..\\..\\output\\honban\\')
-# sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST')
-# skfilepath = '..\\..\\output\\honban\\集計_TST.xlsx'
-# create_pivottable(skfilepath)
-
-
-
-
-
+pib = 0
+if pib == 1:
+    # DBに接続
+    shuukei_toCsv('..\\..\\output\\honban\\')
+    sklst, skfilepath, finalRieki = shuukei_makeExl('..\\..\\output\\honban\\', 'TST')
+    skfilepath = '..\\..\\output\\honban\\集計_TST.xlsx'
+    gen_py_folder = os.path.join(os.environ['LOCALAPPDATA'], 'Temp', 'gen_py')
+    shutil.rmtree(gen_py_folder)
+    create_pivottable(skfilepath)

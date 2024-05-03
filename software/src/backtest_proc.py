@@ -15,6 +15,7 @@ import os
 from datetime import datetime, date, timedelta
 import getConfig as conf
 import technical_BottomSearch as tc_bc
+import technical_3day as tc_3day
 
 #****************************
 # クラス定義
@@ -26,6 +27,7 @@ class KabInf:
     adopt_rsi = 0           # 採用RSI
     pf = 0                  # プロフィットファクター
     entrycnt = 0            # 購入カウント
+    outcodecsv = False      # CSV出力フラグ
 
     #****************************
     # 初期処理
@@ -143,6 +145,7 @@ class TradeInfo:
     plusgain = 0                        # 売却時の株価1000だとした場合のプラス利益金額(全コードPF計算用)
     minusgain = 0                       # 売却時の株価1000だとした場合の損失金額(全コードPF計算用)
     income = 0                          # 利益
+    outcodecsv = False                  # CSV出力フラグ
 
 # 判定クラス
 class Judge:
@@ -161,6 +164,7 @@ class Judge:
     jdg_berd=False
     jdg_bottom=False
     jdg_rsvent=False
+    jdg_3day=False
 
     def __init__(self, scrsec):
         
@@ -179,6 +183,7 @@ class Judge:
         self.jdg_berd = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BERD))        # 髭判定
         self.jdg_bottom = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_BOTTOM))    # 2番3番底判定
         self.jdg_rsvent = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_RSVENT))    # 予約購入時判定
+        self.jdg_3day = int(conf.get_config(scrsec, conf.CONF_KEY_JDG_3DAY))        # 3日目の法則判定
 
 #################################################################
 # バックテストメイン処理
@@ -230,10 +235,13 @@ def backtst_proc(code, df_indicator, Prm):
         df['low'] = df['low'].astype('int64')
         df['close'] = df['close'].astype('int64')
         df['volume'] = df['volume'].astype('int64')
-        df['SMA5'] = df['close'].rolling(window=5).mean()               # 5日移動平均を追加
-        if (jg.jdg_mov == True) or (jg.jdg_mov_long == True) or (jg.jdg_ind == True) :    
+        df['SMA5'] = df['close'].rolling(window=5).mean()                   # 5日移動平均を追加
+        if (jg.jdg_mov == True) or (jg.jdg_mov_long == True) or (jg.jdg_ind == True):    
             df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
             df['SMASET'] = df['close'].rolling(window=Prm.lineave).mean()   # 設定した移動平均を追加
+        elif (jg.jdg_rsi4 == True):
+            df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
+
     except:
         print(cp.code + ": Error")
         return (-1)
@@ -241,15 +249,17 @@ def backtst_proc(code, df_indicator, Prm):
     if len(df) == 0:
         return (-1)
     price = df["close"].values[-1]
-    # # 最新価格が50000を超える株は対象外とする（資金的にまだ早い）
-    # LIMIT_PRICE = 3000
-    # if price > LIMIT_PRICE:
-    #     print("price over :" + str(price))
-    #     return (-1)
+    # # 最新価格が4000を超える株は対象外とする（資金的にまだ早い）
+    LIMIT_PRICE = 4000
+    if price > LIMIT_PRICE:
+        print("price over :" + str(price))
+        return (-1)
 
     #日付をインデックスにして、必要なアイテム順に並び替え
-    if (jg.jdg_mov == True) or (jg.jdg_mov_long == True) or (jg.jdg_ind == True) :    
+    if (jg.jdg_mov == True) or (jg.jdg_mov_long == True) or (jg.jdg_ind == True):    
         df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA25","SMASET"]]
+    elif (jg.jdg_rsi4 == True):
+        df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5","SMA25"]]
     else:
         df_price = df.set_index("datetime").loc[:,["open","high","low","close","volume","SMA5"]]
     df_price["mark"] = ""
@@ -289,7 +299,7 @@ def backtst_proc(code, df_indicator, Prm):
     bkdf = pd.DataFrame()
     for row in df_price.itertuples():
         # 買いポジションがない状態かつ、現在値がリミット金額を超えている超えている場合は処理しない
-        LIMIT_PRICE = 8000
+        LIMIT_PRICE = 6000
         if ((row.close > LIMIT_PRICE) and (ti.buy_pos == 0)): 
             return(-1)
 
@@ -302,6 +312,9 @@ def backtst_proc(code, df_indicator, Prm):
         lastidx_bk = len(bkdf) - 1
         if (jg.jdg_mov == True) or (jg.jdg_mov_long == True) or (jg.jdg_ind == True) :    
             if numpy.isnan(wkdf["SMASET"].values) == True:
+                continue
+        elif (jg.jdg_rsi4 == True):
+            if numpy.isnan(wkdf["SMA25"].values) == True:
                 continue
         else:
             if numpy.isnan(wkdf["SMA5"].values) == True:
@@ -320,7 +333,7 @@ def backtst_proc(code, df_indicator, Prm):
 
         # 当日を取得
         idx_date = row[0]
-        if str(datetime.date(idx_date)) == '2022-11-09':
+        if str(datetime.date(idx_date)) == '2022-11-07':
             a = 1
    
         #----------------------
@@ -343,7 +356,7 @@ def backtst_proc(code, df_indicator, Prm):
         cp.i_low = row.low                             # 安値取得
         cp.i_high = row.high                           # 高値取得
         cp.i_sma5 = row.SMA5                           # 5日移動平均値取得
-        if jg.jdg_mov == True:
+        if jg.jdg_mov == True or jg.jdg_rsi4 == True:
             cp.i_presma25 = cp.i_sma25
             cp.i_sma25 = row.SMA25                     # 25日移動平均値取得
         if jg.jdg_mov_long == True:
@@ -411,6 +424,14 @@ def backtst_proc(code, df_indicator, Prm):
                     ti.sb_mode = DEF.MODE_SELL
                 else:
                     ti.sb_mode = DEF.MODE_BUY
+        elif jg.jdg_rsi4 == True:   # パーフェクトオーダー判定ありの場合の売買モード切替
+            # 両建ての場合
+            if req_sb_mode == DEF.MODE_BOTH:
+                # 5日移動平均線より低ければ売りモード
+                if  cp.i_sma25 > cp.i_close:
+                    ti.sb_mode = DEF.MODE_BUY
+                else:
+                    ti.sb_mode = DEF.MODE_SELL
         else: # 指標判定が有効でない時は自銘柄の短期とで売買を判定する
             # 両建ての場合
             if req_sb_mode == DEF.MODE_BOTH:
@@ -424,7 +445,7 @@ def backtst_proc(code, df_indicator, Prm):
 #        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-10-28'):
 #            print(bkdf)
         #==============================================================================================
-        # 売却処理
+        # 決済処理
         #==============================================================================================
         cnt_buyholddays, iBuyRestCount = kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholddays, iBuyRestCount)
         
@@ -432,7 +453,7 @@ def backtst_proc(code, df_indicator, Prm):
         # 購入判定
         #**************************************************************************************************
         # ポジションを既に持っている場合は実行しない。買い休止カウントが0でない場合も購入しない。   
-        if ti.buy_pos == 0 and iBuyRestCount == 0:      
+        if ti.buy_pos == 0 and ti.sell_pos == 0 and iBuyRestCount == 0:      
             if ti.isreserved == False:
                 # 売買シグナル判定処理
                 jdg_rlt = judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate)
@@ -457,6 +478,14 @@ def backtst_proc(code, df_indicator, Prm):
             # ここまで残ったものをエントリー対象とする。
             #**************************************************************************************************
             entry_proc(cp, ti, lst_codes, bkdf, lastidx_bk, idx_date, ent_timing)
+        
+        # 保持期間が0の時は当日終値で決済
+        if Prm.sell_period == 0:
+            #==============================================================================================
+            # 決済処理
+            #==============================================================================================
+            cnt_buyholddays, iBuyRestCount = kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholddays, iBuyRestCount)
+
 
     #========================
     # CSVに出力する情報を格納
@@ -467,6 +496,7 @@ def backtst_proc(code, df_indicator, Prm):
     Prm.lose = ti.lose
     Prm.income = ti.income
     Prm.entrycnt = ti.entrycnt
+    Prm.outcodecsv = ti.outcodecsv
     Prm.plusgain = int(round(cp.plusgain, 1) * 100)     # 売却時の株価1000だとした場合のプラス利益金額を計算
     Prm.minusgain = int(round(cp.minusgain, 1) * 100)   # 売却時の株価1000だとした場合の損失金額を計算
     if ti.win != 0 or ti.lose !=0:
@@ -502,6 +532,18 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholdday
     #-----------------------
     sellgain = 0                            # 1回の売却利益初期化
     if ti.sell_pos > 0:
+        # 保持日数をインクリメント
+        cnt_buyholddays += 1
+        bkdf.loc[lastidx_bk, "mark"] = "継続"
+
+        if ((jg.jdg_rsi4 == True) and (tc_rsi.jdg_rsi_shortkessai(ti.sb_mode, bkdf, Prm.srsi_hi, Prm.srsi_low) == True)):
+            # 短期RSI判定
+            ti.kessai_sell = True
+            sell_kessai_val = cp.i_close
+        # 長期線を上回ったら売り(1%以上上回ったら)
+        elif ((jg.jdg_mov_long == True) and (cp.i_smaset + (cp.i_smaset * 0.01) < (cp.i_close))):
+            ti.kessai_sell = True
+            sell_kessai_val = cp.i_close
         # 売り保持期間を-1にした場合は購入日翌日の始値で売り
         if -1 == Prm.sell_period:
             ti.kessai_sell = True
@@ -511,13 +553,15 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholdday
             ti.kessai_sell = True
             sell_kessai_val = cp.i_close
         # MACD > SIGで売りシグナル(MACDのゴールデンクロス)
-        elif (jg.jdg_macd == True) and (cp.i_macd >= cp.i_sig):
-            ti.kessai_sell = True
-            sell_kessai_val = cp.i_close
-        # 5日移動平均より上回ったら売り
-        elif cp.i_sma5 < cp.i_close:
-            ti.kessai_sell = True
-            sell_kessai_val = cp.i_close
+        # elif (jg.jdg_macd == True) and (cp.i_macd >= cp.i_sig):
+        #     ti.kessai_sell = True
+        #     sell_kessai_val = cp.i_close
+        # # 5日移動平均より上回ったら売り
+        # elif cp.i_sma5 < cp.i_close:
+        #     ti.kessai_sell = True
+        #     sell_kessai_val = cp.i_close
+        else:
+            print(cp.code, ":", str(idx_date.date()), "継続")
 
         #-----------------------------
         # 決済処理
@@ -597,6 +641,9 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholdday
         # elif cp.i_sma5 > cp.i_close:
         #     ti.kessai_buy = True
         #     buy_kessai_val = cp.i_close
+        # elif str(datetime.date(idx_date)) == '2023-01-13':  # ←の指定日に全て決済
+        #     ti.kessai_buy = True
+        #     buy_kessai_val = cp.i_close
         else:
             print(cp.code, ":", str(idx_date.date()), "継続")
 
@@ -660,6 +707,14 @@ def judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate):
     if jg.jdg_bottom == True:
 #        if bs.jdg_2nd3rdBottom(idx_predate) == False:
         if bs.jdg_2nd3rdBottom(idx_date) == False:
+            return False
+
+    #----------------------
+    # 3日目の法則判定
+    #----------------------
+    if jg.jdg_3day == True:
+        df3day = bkdf.rename(columns={'Index': 'datetime'})
+        if tc_3day.jdg_3day(ti.sb_mode, df3day) == 0:
             return False
 
     #----------------------
@@ -774,7 +829,7 @@ def judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate):
     if jg.jdg_berd == True:
         if tc_beard.jdg_beard(ti.sb_mode, cp.i_open, cp.i_high, cp.i_low, cp.i_close) == 0:
             return False
-            
+
     return True
 
 #################################################################
@@ -791,6 +846,7 @@ def judge_signal(cp, ti, jg, bkdf, Prm, bs, idx_date, idx_predate):
 # 戻り値：なし
 #################################################################
 def entry_proc(cp, ti, lst_codes, bkdf, lastidx_bk, idx_date, ent_timing):
+    ti.outcodecsv = True            # コード別CSV出力ONの時
     # 買いモードの時
     if ti.sb_mode == DEF.MODE_BUY:
         # エントリータイミングが翌日で予約なしの時

@@ -52,15 +52,18 @@ def entry_codelist():
     # 銘柄情報を取得してデータベースに書き込む
     #--------------------------------------
     # エクセルから取得したコード分すべて回す
-    for code, name in df.iterrows():
+
+    for code, value in df.iterrows():
         # コードリストテーブルに指定コードが既にDBに存在するかチェックする
         exi = db.exist_data(cursor, 'tbl_codelist', 'code', str(code))
         # 未登録の場合に処理を行う
         if exi == False:
             # 銘柄情報をスクレイピング
-            brand=get_brand(code)
+            brand = get_brand(code)
+            newbrand = brand + (value[1],)
+            print(newbrand)
             # DBに1レコード追加
-            db.marge_codelist_1record(conn, cursor, "tbl_codelist", brand) 
+            db.marge_codelist_1record(conn, cursor, "tbl_codelist", newbrand) 
 
         # コード設定テーブルに指定コードが既にDBに存在するかチェックする
         exi = db.exist_data(cursor, 'tbl_code_set', 'code', str(code))

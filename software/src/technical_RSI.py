@@ -4,8 +4,8 @@ import common_def as DEF
 
 #################################################################
 #   RSIを算出する
-#   (TradingViewで表示されるのはこっち)
-#   (正直　下のrsi()とどちらがいいのか分からない)
+#   (TradingViewで表示されるのはこっち[ワイルダー式])
+#   (こちらのRSIの方がいい気がする)
 # ################################################################
 def rsi_tradingview(ohlc: pd.DataFrame, period: int = 14, round_rsi: bool = False):
     """ Implements the RSI indicator as defined by TradingView on March 15, 2021.
@@ -47,7 +47,7 @@ def rsi_tradingview(ohlc: pd.DataFrame, period: int = 14, round_rsi: bool = Fals
 
 #################################################################
 #   RSIを算出する
-#   (SIB証券のアプリで表示されるのはこっち)
+#   (SIB証券のアプリで表示されるのはこっち[カトラー式])
 #   (正直　rsi_tradingview()とどちらがいいのか分からない)
 # ################################################################
 def rsi(df, period: int = 14):
@@ -159,6 +159,7 @@ def jdg_rsi_short(sb_mode, df, srsi_low, jdg_rsi4rev):
     rsi4 = taildf["RSI4"].values[-1]        # 当日短期RSI
     rsi4_pre1 = taildf["RSI4"].values[-2]   # 前日短期RSI
 
+#    print(taildf)
     # 買いシグナル判定
     if sb_mode == DEF.MODE_BUY:
         if(jdg_rsi4rev == 0):
@@ -172,12 +173,13 @@ def jdg_rsi_short(sb_mode, df, srsi_low, jdg_rsi4rev):
     # 売りシグナル判定
     elif sb_mode == DEF.MODE_SELL:
         if(jdg_rsi4rev == 0):
-            if (rsi4_pre1 > rsi4):
+            if (rsi4 > (100 - srsi_low)):
                 sigsw_rsi = 1
         else:
             if (rsi4_pre1 > (100 - srsi_low)):
                 if (rsi4_pre1 > rsi4):
-                    sigsw_rsi = 1
+                    if (rsi4 > (100 - 40)):             # 当日RSIが40未満   
+                        sigsw_rsi = 1
 
     return sigsw_rsi   
 #################################################################
@@ -200,9 +202,9 @@ def jdg_rsi_shortkessai(sb_mode, df, srsi_hi, srsi_low ):
 #            sigsw_rsi = True
     # 売りエントリー時の決済シグナル判定
     elif sb_mode == DEF.MODE_SELL:
-        if (srsi_low < rsi4):
-            sigsw_rsi = True
         if (100 - srsi_hi > rsi4):
             sigsw_rsi = True
+        # if (srsi_low < rsi4):
+        #     sigsw_rsi = True
 
     return sigsw_rsi   

@@ -17,6 +17,37 @@ def connect_db():
     cursor = conn.cursor() #カーソルオブジェクトを作成
 
     return conn, cursor
+##########################################################################
+#   DBに接続する
+##########################################################################
+def connect_db2(dbname):
+    conn = sqlite3.connect(dbname, isolation_level=None)#データベースを作成、自動コミット機能ON
+
+    cursor = conn.cursor() #カーソルオブジェクトを作成
+
+    return conn, cursor
+
+##########################################################################
+#   トレード結果履歴テーブルを作成する
+##########################################################################
+def create_tradehist(conn, cursor):
+    """ create a table in the SQLite database"""
+    sql = """CREATE TABLE IF NOT EXISTS TradeHist (
+            "Index" DATE,
+            "code" INTEGER,
+            "open" INTEGER,
+            "close" INTEGER,
+            "PF" REAL,
+            "mark" TEXT,
+            "buygain" INTEGER,
+            "sellgain" INTEGER,
+            "latent" INTEGER,
+            "income" INTEGER,
+            "name" TEXT,
+            "sangyou" TEXT
+        ); """
+    cursor.execute(sql)
+    conn.commit()
 
 ##########################################################################
 #   銘柄リストテーブルを作成する
@@ -31,7 +62,7 @@ def create_codelisttbl(conn, cursor):
     ・カラム型は指定しなくても特には問題ない
     　　※NULL, INTEGER(整数), REAL(浮動小数点), TEXT(文字列), BLOB(バイナリ)の5種類
     """
-    sql = 'create table if not exists tbl_codelist(code text PRIMARY KEY, Name text NOT NULL, Sijou text, Sangyou text)'
+    sql = 'create table if not exists tbl_codelist(code text PRIMARY KEY, Name text NOT NULL, Sijou text, Sangyou text, Sisuu text)'
     cursor.execute(sql)#executeコマンドでSQL文を実行
     
     conn.commit()
@@ -162,13 +193,14 @@ def marge_codelist_1record(conn, cursor, tbl, data):
         return
 
     sql = 'INSERT INTO ' + tbl + \
-    ' VALUES("' + str(data[0]) + '","' + data[1] + '","' + data[2] + '","' + data[3] + '")' + \
+    ' VALUES("' + str(data[0]) + '","' + data[1] + '","' + data[2] + '","'+ data[3] + '","' + data[4] + '")' + \
     ' on conflict (code) DO UPDATE SET' + \
     ' code="' + str(data[0]) + '"' + \
     ',Name="' + data[1] + '"' + \
     ',Sijou="' + data[2] + '"' + \
-    ',Sangyou="' + data[3] + '"' + ';'
- 
+    ',Sangyou="' + data[3] + '"' + \
+    ',Sisuu="' + data[4] + '"' + ';'
+    
     print(sql)
     #命令を実行
     conn.execute(sql)
@@ -268,7 +300,7 @@ def read_code_record(conn, cursor, code):
     select * ですべてのデータを参照し、fromでどのテーブルからデータを呼ぶのか指定
     fetchallですべての行のデータを取り出す
     """
-    sql = 'SELECT * FROM ' + 'tbl_codelist ' + 'WHERE ' + 'Code = ' + '"' + code + '"'
+    sql = 'SELECT * FROM ' + 'tbl_codelist ' + 'WHERE ' + 'Code = ' + '"' + str(code) + '"'
     cursor.execute(sql)
     #df = pd.read_sql(sql, conn)
     for cd in cursor.fetchall():
@@ -293,7 +325,12 @@ def read_code_all(cursor, tbl):
 
     return codes
 
-
+##########################################################################
+#   テーブル内の全レコードを1行ずつ取り出す
+##########################################################################
+def insert_data_from_df_to_db(conn, df):
+    """ insert data from dataframe to the SQLite database"""
+    df.to_sql('TradeHist', conn, if_exists='append', index=False)
 
 ##########################################################################
 #   テーブル内の全レコードを1行ずつ取り出す
@@ -309,6 +346,18 @@ def read_rec_fetchone(cursor):
 
         print(result)
 
+##########################################################################
+#   NULLのあるレコードを削除する
+##########################################################################
+def delete_all_records(conn, table_name):
+    """ delete all records from the specified table """
+    try:
+        cur = conn.cursor()
+        cur.execute(f"DELETE FROM {table_name}")
+        conn.commit()
+        print("All records deleted successfully from " + table_name)
+    except sqlite3.OperationalError as e:
+        print(e)
 ##########################################################################
 #   NULLのあるレコードを削除する
 ##########################################################################
