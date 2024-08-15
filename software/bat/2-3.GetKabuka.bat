@@ -18,25 +18,12 @@ start C:\tool\uwsc5302\UWSC.exe C:\tool\uwsc5302\kabucom_login.uws
 timeout 30
 
 rem '----------------------------------
-rem ' 最新の株価を取得
+rem ' 最新の株価を取得 (決済には関係ないけど15:00以降の終値を取得する為)
 rem '----------------------------------
 cd C:\MorinoFolder\Python\KabuRadar\software\src
 echo 株価取得
 rem 'APIで最新の株価を取得してデータベースに保存
 call C:\MorinoFolder\Python\KabuRadar\software\src\main_entry_kabukom_price.py
-
-rem '----------------------------------
-rem ' スクリーニング 
-rem '----------------------------------
-call C:\MorinoFolder\Python\KabuRadar\software\src\main_param_chg.py HI
-
-rem 'スクリーニング開始
-call C:\MorinoFolder\Python\KabuRadar\software\src\main_analyze_all.py HI
-
-rem 'LINE通知 ＆ auカブコム証券で売買
-call C:\MorinoFolder\Python\KabuRadar\software\src\main_kabustation_trade.py HI
-
-
 
 rem '-------------------------------------------
 rem ' 株ステーション終了
