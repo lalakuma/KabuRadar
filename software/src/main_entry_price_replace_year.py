@@ -16,7 +16,7 @@ codes = db.read_code_all(cursor, "tbl_codelist")
 
 ptype = "year"
 #ptype = "day"
-period = 1    # 期間(1なら1日または1年)
+period = 5    # 期間(1なら1日または1年)
 frequency = 1   # 日足
 
 # 現在DBに登録されている全テーブルリストを取得

@@ -3,30 +3,64 @@ import numpy as np
 import common_def as DEF
 
 #################################################################
+#   コナーズRSIを取得する
+# ################################################################
+
+# コナーズRSI取得関数
+def get_connors_rsi(df, period: int = 4):
+    cns_rsi = connors_rsi(df, 4, 4, 100)
+    df['RSI4'] = cns_rsi['RSI4']
+    return df
+
+# ワイルダー式RSI算出
+def wilders_rsi(df, period):
+    delta = df['close'].diff()
+    up, down = delta.copy(), delta.copy()
+    up[up < 0] = 0
+    down[down > 0] = 0
+    avg_gain = up.ewm(com=period-1, min_periods=period).mean()
+    avg_loss = abs(down.ewm(com=period-1, min_periods=period).mean())
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+    rsi.name = 'RSI'  # RSIの計算結果の列名を'RSI'に変更
+    df_wrsi = pd.DataFrame(rsi)
+    return df_wrsi
+
+# 連続騰落期間のRSI算出
+def streak_rsi(df, period):
+    streak = df['close'].diff()
+    streak[streak < 0] = -1
+    streak[streak > 0] = 1
+    streak = streak.cumsum()
+    streak_df = pd.DataFrame(streak, columns=['close'])
+    streak_rsi = wilders_rsi(streak_df, period)
+    return streak_rsi
+
+# ROC算出
+def roc(df, period):
+    roc = df['close'].diff(period) / df['close'].shift(period) * 100
+    roc.name = 'ROC'  # ROCの計算結果の列名を'ROC'に変更
+    df_roc = pd.DataFrame(roc)
+    return df_roc
+
+# コナーズRSI算出
+def connors_rsi(df, rsi_period, streak_period, roc_period):
+    rsi_value = wilders_rsi(df, rsi_period)
+    streak_rsi_value = streak_rsi(df, streak_period)
+    roc_value = roc(df, roc_period)
+    # print(rsi_value)
+    # print(streak_rsi_value)
+    # print(roc_value)
+    connors_rsi_value = (rsi_value['RSI'] + streak_rsi_value['RSI'] + roc_value['ROC']) / 3
+    df_crsi = pd.DataFrame(connors_rsi_value, columns=['RSI4'])
+    return df_crsi
+
+#################################################################
 #   RSIを算出する
 #   (TradingViewで表示されるのはこっち[ワイルダー式])
 #   (こちらのRSIの方がいい気がする)
 # ################################################################
 def rsi_tradingview(ohlc: pd.DataFrame, period: int = 14, round_rsi: bool = False):
-    """ Implements the RSI indicator as defined by TradingView on March 15, 2021.
-        The TradingView code is as follows:
-        //@version=4
-        study(title="Relative Strength Index", shorttitle="RSI", format=format.price, precision=2, resolution="")
-        len = input(14, minval=1, title="Length")
-        src = input(close, "Source", type = input.source)
-        up = rma(max(change(src), 0), len)
-        down = rma(-min(change(src), 0), len)
-        rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
-        plot(rsi, "RSI", color=#8E1599)
-        band1 = hline(70, "Upper Band", color=#C0C0C0)
-        band0 = hline(30, "Lower Band", color=#C0C0C0)
-        fill(band1, band0, color=#9915FF, transp=90, title="Background")
-    :param ohlc:
-    :param period:
-    :param round_rsi:
-    :return: an array with the RSI indicator values
-    """
-
     delta = ohlc["close"].diff()
 
     up = delta.copy()
@@ -37,7 +71,6 @@ def rsi_tradingview(ohlc: pd.DataFrame, period: int = 14, round_rsi: bool = Fals
     down[down > 0] = 0
     down *= -1
     down = pd.Series.ewm(down, alpha=1/period).mean()
-
     rsi = np.where(up == 0, 0, np.where(down == 0, 100, 100 - (100 / (1 + up / down))))
     if period == 14:
         ohlc["RSI"] = np.round(rsi, 2) if round_rsi else rsi
@@ -69,7 +102,6 @@ def rsi(df, period: int = 14):
  
     # RSIを算出
     df["RSI4"] = 100.0 * (df_up_sma / (df_up_sma + df_down_sma))
- 
     return df
 
 #################################################################

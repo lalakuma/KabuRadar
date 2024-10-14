@@ -15,6 +15,7 @@ from yahoo_finance_api2.exceptions import YahooFinanceError
 import datetime 
 
 def get_pricedata(code, ptype, peri, freq):
+    # import pdb; pdb.set_trace()  # ブレークポイントを設定
     if code == '0':
         my_share = share.Share('^N225')
     elif code == '800':
@@ -31,9 +32,11 @@ def get_pricedata(code, ptype, peri, freq):
 
     try:
         symbol_data = my_share.get_historical(peri_type, peri, share.FREQUENCY_TYPE_DAY, freq)
-        
+        print(symbol_data)
     except YahooFinanceError as e:
         print(e.message)
+    except Exception as e:
+        print(f"予期しないエラーが発生しました: {e}")        
 #        sys.exit(1)
     
     df = pd.DataFrame(symbol_data)

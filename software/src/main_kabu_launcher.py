@@ -19,14 +19,21 @@ logger.info("処理 main_kabu_launcher 開始")
 dt = datetime.datetime.now()
 tm = dt.time()
 
-# 14:00～14：59の間に実行された場合はエントリー処理を行う
+# 8:45～9:30の間に実行された場合は寄りアルゴを実行する
+if tm >= datetime.time(8,45,0) and tm <= datetime.time(9,30,0):
+    logger.info("1-1.kabu_yori_arugo.bat開始")
+    # 「寄りアルゴ」バッチファイル実行
+    subprocess.run(r"C:\MorinoFolder\Python\KabuRadar\software\bat\1-1.kabu_yori_arugo.bat")
+    logger.info("1-1.kabu_yori_arugo.bat完了")
+
+# 11:30～12：00の間に実行された場合はエントリー処理を行う
 if tm >= datetime.time(11,30,0) and tm <= datetime.time(12,00,0):
     logger.info("2-1.kabu_screening_trade.bat開始")
     # 「KABUステーション起動、株価取得、スクリーニング、株購入」バッチファイル実行
     subprocess.run(r"C:\MorinoFolder\Python\KabuRadar\software\bat\2-1.kabu_screening_trade.bat")
     logger.info("2-1.kabu_screening_trade.bat完了")
 
-# 15:00～15：30の間に実行された場合はエントリー処理を行う
+# 14:00～14：30の間に実行された場合はエントリー処理を行う
 elif tm >= datetime.time(14,00,0) and tm <= datetime.time(14,30,0):
     logger.info("2-2.KabuStation_kessai.bat開始")
     # 「KABUステーション起動、株価取得、株決済」バッチファイル実行

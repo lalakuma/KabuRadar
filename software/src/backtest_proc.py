@@ -268,6 +268,8 @@ def backtst_proc(code, df_indicator, Prm):
     df_price["sell"] = 0
     df_price["sellgain"] = 0
     df_price["income"] = 0
+    df_price["RSI"] = 0
+
     # 指標銘柄も日付をインデックスにする
     #df_indicator= df_indicator.set_index("datetime").loc[:,["close","SMA5","SMA25","SMA75"]]
 
@@ -278,15 +280,18 @@ def backtst_proc(code, df_indicator, Prm):
     # RSI追加
     if jg.jdg_rsi == True:
         df_price = tc_rsi.rsi_tradingview(df_price)		# Tradingviewで見るRSIに近い計算方法
-    #    df_price = tc_rsi.rsi(df_price)				# SBI證券アプリで見るRSIに近い計算方法
+    #    df_price = tc_rsi.rsi(df_price)				    # SBI證券アプリで見るRSIに近い計算方法
         if Prm.rsi_per != -1:
             Prm.adopt_rsi = tc_rsi.search_proper_rsi(df_price, Prm.rsi_per)
         else:
             Prm.adopt_rsi = Prm.rsi_border
     
-    # 短期RSI追加
+    # 短期コナーズRSI追加
     if jg.jdg_rsi4 == True:
-        df_price = tc_rsi.rsi_tradingview(df_price, 4)	# Tradingviewで見るRSIに近い計算方法
+    #    df_price = tc_rsi.rsi(df_price)				    # SBI證券アプリで見るRSIに近い計算方法
+#        df_price = tc_rsi.rsi_tradingview(df_price, 4)	# Tradingviewで見るRSIに近い計算方法
+        df_price = tc_rsi.get_connors_rsi(df_price, 4)		# コナーズRSI
+
     # ボリンジャーバンド追加
     if jg.jdg_bolin == True:
         df_price = tc_bb.Bollinger(df_price)
@@ -333,8 +338,9 @@ def backtst_proc(code, df_indicator, Prm):
 
         # 当日を取得
         idx_date = row[0]
-        if str(datetime.date(idx_date)) == '2022-11-07':
+        if str(datetime.date(idx_date)) == '2024-05-08':
             a = 1
+#            print(df_price)
    
         #----------------------
         # 最新のMACDとシグナルの値を取得
@@ -442,7 +448,7 @@ def backtst_proc(code, df_indicator, Prm):
                     ti.sb_mode = DEF.MODE_BUY
 
     
-#        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2021-10-28'):
+#        if(datetime.strftime(idx_date, '%Y-%m-%d') == '2024-5-8'):
 #            print(bkdf)
         #==============================================================================================
         # 決済処理
@@ -644,8 +650,8 @@ def kessai_proc(cp, ti, jg, bkdf, Prm, row, idx_date, lastidx_bk, cnt_buyholdday
         # elif str(datetime.date(idx_date)) == '2023-01-13':  # ←の指定日に全て決済
         #     ti.kessai_buy = True
         #     buy_kessai_val = cp.i_close
-        else:
-            print(cp.code, ":", str(idx_date.date()), "継続")
+        #else:
+        #    print(cp.code, ":", str(idx_date.date()), "継続")
 
         # 前日の安値を更新
 #        pre_low = row.low

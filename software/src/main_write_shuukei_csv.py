@@ -167,15 +167,16 @@ def shuukei_makeExl(shuukei_path, stance):
         # 同一codeのデータを取得します
         data = df_con[df_con['code'] == code]
         # 'mark'が'新買'の行の'close'を取得します
-        buy_value = data[data['mark'] == '新買']['close'].values[0]
-        # 'mark'が'継続'の行について、'close'と買い値との差分を'latent'に設定します
-        df_con.loc[(df_con['code'] == code) & (df_con['mark'] == '継続'), 'latent'] = (data[data['mark'] == '継続']['close'] - buy_value) * 100
+        buy_value = None
+        # 'mark'が'新買'または'継続'の行について、'close'と買い値との差分を'latent'に設定します
+        for i, row in data.iterrows():
+            if row['mark'] == '新買':
+                buy_value = row['close']
+            elif row['mark'] == '継続' and buy_value is not None:
+                df_con.loc[i, 'latent'] = (row['close'] - buy_value) * 100
     
     # income列に当日のbuygainと当日のsellgainと前日までのincomeの合計を入力します
     df_con['income'] = (df_con['buygain'] + df_con['sellgain']).cumsum()
-                  
-    pd.set_option('display.max_rows', 900)
-    print(df_con)
 
     # DBに接続
     conn, cursor = db.connect_db()
@@ -187,7 +188,7 @@ def shuukei_makeExl(shuukei_path, stance):
     db.insert_data_from_df_to_db(conn, df_con)
     # DBクローズ
     db.close_db(conn)
-    print(df_con)
+
     if len(lst_data) == 0:
         print("集計対象ファイルがありません。")
         return 0,"",0

@@ -30,18 +30,20 @@ def csv_get_all():
         print(csv_code)
 
         # CSVファイル読み込み
-        csv_input = pd.read_csv(filepath_or_buffer="..\..\Input\CSV\entry\TimeChart" + csv_code + ".csv", encoding="ms932", sep=",")
+        csv_input = pd.read_csv(filepath_or_buffer="..\..\Input\CSV\entry\TimeChart" + csv_code + ".csv", encoding="utf-8-sig", sep=",")
 
         # 必要な項目をリストに追加
         lst_price = []
         # 必要な項目のみ抽出してリストを作成
         for i, row in csv_input.iterrows():
-            dt = str(row["日付"])[0:4] + "-" + str(row["日付"])[4:6] + "-" + str(row["日付"])[6:8]
-            opn = str(int(row["始値"]))
-            hi = str(int(row["高値"]))
-            low = str(int(row["安値"]))
-            cur = str(int(row["終値"]))
-            vol = str(int(row["出来高"]))
+            dt = str(row["日付"])[0:4] + "-" + str(row["日付"])[5:7] + "-" + str(row["日付"])[8:10]
+#            dt = str(row["日付"])[0:4] + "-" + str(row["日付"])[4:6] + "-" + str(row["日付"])[6:8]
+#            opn = str(int(row["始値"]))
+            opn = str(float(str(row["始値"]).replace(",", "")))
+            hi = str(float(str(row["高値"]).replace(",", "")))
+            low = str(float(str(row["安値"]).replace(",", "")))
+            cur = str(float(str(row["終値"]).replace(",", "")))
+            vol = str(int(str(row["出来高"]).replace(",", "")))
             tpl = (dt, opn, hi, low, cur, vol)
             lst_price.append(tpl)
 
