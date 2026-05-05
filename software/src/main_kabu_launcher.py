@@ -34,7 +34,7 @@ if tm >= datetime.time(11,30,0) and tm <= datetime.time(12,00,0):
     logger.info("2-1.kabu_screening_trade.bat完了")
 
 # 14:00～14：30の間に実行された場合はエントリー処理を行う
-elif tm >= datetime.time(14,00,0) and tm <= datetime.time(14,30,0):
+elif tm >= datetime.time(9,00,0) and tm <= datetime.time(14,30,0):
     logger.info("2-2.KabuStation_kessai.bat開始")
     # 「KABUステーション起動、株価取得、株決済」バッチファイル実行
     subprocess.run(r"C:\MorinoFolder\Python\KabuRadar\software\bat\2-2.KabuStation_kessai.bat")

@@ -195,7 +195,9 @@ def shuukei_makeExl(shuukei_path, stance):
 
     filepath = shuukei_path + fileShukei
     # エクセルに書き込み
-    df_con.to_excel(filepath, sheet_name='全コード結合', encoding="shift_jis")
+#    df_con.to_excel(filepath, sheet_name='全コード結合', encoding="shift_jis")
+    df_con.to_excel(filepath, sheet_name='全コード結合')
+
 
     dfreal = pd.DataFrame(lst_data)    
     with pd.ExcelWriter(filepath, engine="openpyxl", mode="a") as writer:

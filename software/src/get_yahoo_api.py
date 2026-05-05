@@ -1,56 +1,48 @@
-####################################################
-#   ヤフーファイナンスAPI株価を取得する
-#   取得した株価をデータベースに登録する
-# 　但し、既にテーブルが存在する場合は差し替える 
-####################################################
-#日経225：'^N225'
-#ダウ：'^DJI'
-#SP500：'^GSPC'
-#ナスダック総合指数：'^IXIC'
-
-import sys
+import yfinance as yf
 import pandas as pd
-from yahoo_finance_api2 import share
-from yahoo_finance_api2.exceptions import YahooFinanceError
-import datetime 
+from datetime import datetime, timedelta
 
 def get_pricedata(code, ptype, peri, freq):
-    # import pdb; pdb.set_trace()  # ブレークポイントを設定
-    if code == '0':
-        my_share = share.Share('^N225')
-    elif code == '800':
-        my_share = share.Share('^DJI')
-    else:
-        my_share = share.Share(code + '.T')
-    symbol_data = None
     
-    if ptype == "year":
-        peri_type = share.PERIOD_TYPE_YEAR
+    ticker_code = ""
+    if code == '0':
+        ticker_code = '^N225'
+    elif code == '800':
+        ticker_code = '^DJI'
     else:
-        peri_type = share.PERIOD_TYPE_DAY
+        ticker_code = str(code) + '.T'
 
+    period_str = ""
+    if ptype == "day":
+        period_str = str(peri) + "d"
+    elif ptype == "year":
+        period_str = str(peri) + "y"
+    else:
+        period_str = "10d"
+
+    interval_str = "1d"
 
     try:
-        symbol_data = my_share.get_historical(peri_type, peri, share.FREQUENCY_TYPE_DAY, freq)
-        print(symbol_data)
-    except YahooFinanceError as e:
-        print(e.message)
+        ticker = yf.Ticker(ticker_code)
+        df_daily = ticker.history(period=period_str, interval=interval_str, auto_adjust=False)
+
+        if df_daily.empty:
+            print(f"Code {code}: No data found for the given period.")
+            return pd.DataFrame()
+
+        df_daily.rename(columns={
+            'Open': 'open',
+            'High': 'high',
+            'Low': 'low',
+            'Close': 'close',
+            'Volume': 'volume'
+        }, inplace=True)
+        
+        df_daily = df_daily[["open", "high", "low", "close", "volume"]]
+
     except Exception as e:
-        print(f"予期しないエラーが発生しました: {e}")        
-#        sys.exit(1)
-    
-    df = pd.DataFrame(symbol_data)
-    if df.size > 0:
-        df["datetime"] = pd.to_datetime(df.timestamp, unit="ms")    
-        # 日本時間へ変換
-        df["datetime"] = df["datetime"] + datetime.timedelta(hours=9)
-        # データ型を設定　(数値はNaNが含まれるとintegerにできないので浮動小数点型にする)
-#        df['datetime'] = df['datetime'].astype('datetime64')
-        df['datetime'] = pd.DatetimeIndex(df["datetime"]).date
-        #日付をインデックスにして、必要なアイテム順に並び替え
-        df_daily = df.set_index("datetime").loc[:,["open","high","low","close","volume"]]
-    else:
-        df_daily = df
+        print(f"Code {code}: 予期しないエラーが発生しました: {e}")
+        return pd.DataFrame()
 
-    return(df_daily)
-
+    df_daily.index.name = 'datetime'
+    return df_daily

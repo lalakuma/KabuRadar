@@ -13,6 +13,7 @@ import time
 conn, cursor = db.connect_db()
 # 全銘柄コードリスト取得
 codes = db.read_code_all(cursor, "tbl_codelist")
+print(f"読み込んだ銘柄数: {len(codes)}")
 
 #ptype = "year"
 ptype = "day"
@@ -51,7 +52,7 @@ for code in codes:
             db.add_df_records(conn, code, df_daily)
 
     print(code)
-    time.sleep(50/1000)
+    time.sleep(100/1000)
 
 
 # DBクローズ

@@ -28,7 +28,7 @@ for code in codes:
 
     #途中までスキップする場合に使用する
     if skip == 1:
-        if code == '8282':
+        if code == '2201':
             skip = 0
         else:
             continue
@@ -50,8 +50,8 @@ for code in codes:
             # DBにレコードを追加
             db.add_df_records(conn, code, df_daily)
 
-    print(code)
-    time.sleep(50/1000)
+    print("code :" + code)
+    time.sleep(100/1000)
 
 
 # DBクローズ

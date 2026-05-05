@@ -133,7 +133,8 @@ for trd in lst_shuukei:
 
 # 平日限定で以下の処理を行う
 iWeek = datetime.datetime.today().isoweekday()
-if iWeek != 6 and iWeek != 7:            #土日以外 
+#if iWeek != 6 and iWeek != 7:            #土日以外 
+if iWeek != 6:            #土日以外 
     #----------------------------------------
     # LINEで結果を通知
     #----------------------------------------

@@ -227,14 +227,27 @@ def backtst_proc(code, df_indicator, Prm):
 #    str_date_end = '2016-12-31'
     # 指定期間のデータをDBから読み出す
     df = db.read_rec_period(conn, cursor, str(cp.code), str_date_sta, str_date_end)
+#    pd.set_option('display.max_rows', None)
+#    print(df['datetime'])
+    invalid_dates = pd.to_datetime(df['datetime'], errors='coerce').isna()
+
     #df.columns = ["datetime","open","high","low","close","volume"]
     try:
-        df['datetime'] = df['datetime'].astype('datetime64')
+        df['datetime'] = pd.to_datetime(df['datetime'], errors='coerce')
+        df = df.dropna(subset=['datetime'])
+
+        numeric_cols = ['open', 'high', 'low', 'close', 'volume']
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        df[numeric_cols] = df[numeric_cols].fillna(0)
+
         df['open'] = df['open'].astype('int64')
         df['high'] = df['high'].astype('int64')
         df['low'] = df['low'].astype('int64')
         df['close'] = df['close'].astype('int64')
         df['volume'] = df['volume'].astype('int64')
+        
         df['SMA5'] = df['close'].rolling(window=5).mean()                   # 5日移動平均を追加
         if (jg.jdg_mov == True) or (jg.jdg_mov_long == True) or (jg.jdg_ind == True):    
             df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
@@ -242,8 +255,9 @@ def backtst_proc(code, df_indicator, Prm):
         elif (jg.jdg_rsi4 == True):
             df['SMA25'] = df['close'].rolling(window=25).mean()             # 25日移動平均を追加
 
-    except:
-        print(cp.code + ": Error")
+    except Exception as e:
+        print(f"Error details: {e}")
+        print(str(cp.code) + ": Error")
         return (-1)
 
     if len(df) == 0:
@@ -279,7 +293,7 @@ def backtst_proc(code, df_indicator, Prm):
         
     # RSI追加
     if jg.jdg_rsi == True:
-        df_price = tc_rsi.rsi_tradingview(df_price)		# Tradingviewで見るRSIに近い計算方法
+        df_price = tc_rsi.rsi_tradingview(df_price, 4)		# Tradingviewで見るRSIに近い計算方法
     #    df_price = tc_rsi.rsi(df_price)				    # SBI證券アプリで見るRSIに近い計算方法
         if Prm.rsi_per != -1:
             Prm.adopt_rsi = tc_rsi.search_proper_rsi(df_price, Prm.rsi_per)
@@ -289,8 +303,8 @@ def backtst_proc(code, df_indicator, Prm):
     # 短期コナーズRSI追加
     if jg.jdg_rsi4 == True:
     #    df_price = tc_rsi.rsi(df_price)				    # SBI證券アプリで見るRSIに近い計算方法
-#        df_price = tc_rsi.rsi_tradingview(df_price, 4)	# Tradingviewで見るRSIに近い計算方法
-        df_price = tc_rsi.get_connors_rsi(df_price, 4)		# コナーズRSI
+        df_price = tc_rsi.rsi_tradingview(df_price, 4)	# Tradingviewで見るRSIに近い計算方法
+#        df_price = tc_rsi.get_connors_rsi(df_price, 4)		# コナーズRSI
 
     # ボリンジャーバンド追加
     if jg.jdg_bolin == True:

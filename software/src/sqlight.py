@@ -2,7 +2,8 @@
 import sqlite3
 from typing import List, Tuple
 from numpy import true_divide
-from numpy.lib.function_base import append
+#from numpy.lib.function_base import append
+import numpy as np
 import pandas as pd
 import datetime
 import getConfig as conf
